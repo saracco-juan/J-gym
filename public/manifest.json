@@ -1,0 +1,24 @@
+{
+    "name": "J-GYM — Sobrecarga Progresiva",
+    "short_name": "J-GYM",
+    "description": "PWA mobile-first para trackear entrenamientos en el gimnasio con gestión de sobrecarga progresiva.",
+    "start_url": "/dashboard",
+    "display": "standalone",
+    "background_color": "#09090b",
+    "theme_color": "#059669",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
