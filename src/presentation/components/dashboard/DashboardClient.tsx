@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { startOfWeek, addDays } from "date-fns";
+import { startOfWeek } from "date-fns";
 import WeekCalendar from "./WeekCalendar";
 import RoutineSummary from "./RoutineSummary";
 import { fetchDayData, checkHasRoutines } from "@/app/actions/dashboardActions";
@@ -75,26 +75,33 @@ export default function DashboardClient() {
 
     // ─── Fetch data on date change ───────────────────────────
 
-    const loadDayData = useCallback(async (dateStr: string) => {
-        setIsLoading(true);
-        const result = await fetchDayData(dateStr);
-        setDayData(result);
-        setIsLoading(false);
-    }, []);
-
     useEffect(() => {
-        if (!isCheckingOnboarding) {
-            loadDayData(selectedDate);
-        }
-    }, [selectedDate, loadDayData, isCheckingOnboarding]);
+        if (isCheckingOnboarding) return;
+
+        let cancelled = false;
+        fetchDayData(selectedDate).then((result) => {
+            if (cancelled) return;
+            setDayData(result);
+            setIsLoading(false);
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedDate, isCheckingOnboarding]);
 
     // ─── Week navigation ────────────────────────────────────
+
+    const handleSelectDate = useCallback((dateStr: string) => {
+        setIsLoading(true);
+        setSelectedDate(dateStr);
+    }, []);
 
     const handleChangeWeek = useCallback((newWeek: Date) => {
         setActiveWeek(newWeek);
         // Auto-select Monday of the new week
-        setSelectedDate(getMondayStr(newWeek));
-    }, []);
+        handleSelectDate(getMondayStr(newWeek));
+    }, [handleSelectDate]);
 
     // ─── Start workout ──────────────────────────────────────
 
@@ -126,7 +133,7 @@ export default function DashboardClient() {
             <WeekCalendar
                 activeWeek={activeWeek}
                 selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
+                onSelectDate={handleSelectDate}
                 onChangeWeek={handleChangeWeek}
             />
 

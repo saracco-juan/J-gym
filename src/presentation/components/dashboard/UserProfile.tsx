@@ -11,7 +11,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
 import { resetUserAppData } from "@/app/actions/debugActions";
-import { LogOut, RotateCcw, User } from "lucide-react";
+import { LogOut, RotateCcw } from "lucide-react";
 
 interface UserInfo {
     email: string;
