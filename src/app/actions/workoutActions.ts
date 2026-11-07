@@ -12,6 +12,7 @@
 
 import type { IWorkoutLog } from "@/core/domain/workout-log";
 import type { IRoutineExercise } from "@/core/domain/routine-template";
+import { detectPersonalRecords } from "@/core/use-cases/detect-personal-records";
 import { WorkoutLogRepository } from "@/infrastructure/database/WorkoutLogRepository";
 import { RoutineRepository } from "@/infrastructure/database/RoutineRepository";
 import { RepositoryError } from "@/infrastructure/database/RoutineRepository";
@@ -65,14 +66,7 @@ export async function finalizeWorkoutSession(
         }
 
         // 4. Detectar nuevos PRs
-        const newPRs: string[] = [];
-        for (const ex of secureLog.exercises) {
-            const previousBest = previousPRs.get(ex.exercise.name) ?? 0;
-            const todayMax = Math.max(...ex.sets.map((s) => s.actualWeight), 0);
-            if (todayMax > previousBest && todayMax > 0) {
-                newPRs.push(ex.exercise.name);
-            }
-        }
+        const newPRs = detectPersonalRecords(secureLog.exercises, previousPRs);
 
         return { success: true, newPRs: newPRs.length > 0 ? newPRs : undefined };
     } catch (error) {
