@@ -11,6 +11,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
 import { resetUserAppData } from "@/app/actions/debugActions";
+import { getUserDisplay } from "@/core/domain/user-display";
 import { LogOut, RotateCcw } from "lucide-react";
 
 interface UserInfo {
@@ -33,9 +34,14 @@ export default function UserProfile() {
             const supabase = createSupabaseBrowserClient();
             const { data: { user: authUser } } = await supabase.auth.getUser();
             if (authUser) {
+                const display = getUserDisplay({
+                    email: authUser.email,
+                    fullName: authUser.user_metadata?.full_name,
+                    isAnonymous: authUser.is_anonymous,
+                });
                 setUser({
-                    email: authUser.email ?? "",
-                    name: authUser.user_metadata?.full_name ?? authUser.email ?? "",
+                    email: display.email,
+                    name: display.name,
                     avatarUrl: authUser.user_metadata?.avatar_url ?? null,
                 });
             }
@@ -117,7 +123,9 @@ export default function UserProfile() {
                     {/* User info */}
                     <div className="px-4 py-2 border-b border-zinc-800">
                         <p className="text-sm font-semibold text-white truncate">{user.name}</p>
-                        <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                        {user.email && (
+                            <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                        )}
                     </div>
 
                     {/* Logout */}

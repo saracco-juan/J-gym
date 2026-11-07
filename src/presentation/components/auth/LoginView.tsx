@@ -11,12 +11,15 @@
  */
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { signInAsDemo } from "@/infrastructure/auth/demoSignIn";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
 import { Dumbbell, Mail } from "lucide-react";
 
 type LoginState = "idle" | "loading" | "success" | "error";
 
 export default function LoginView() {
+    const router = useRouter();
     const [email, setEmail] = useState("");
     const [state, setState] = useState<LoginState>("idle");
     const [errorMsg, setErrorMsg] = useState("");
@@ -41,6 +44,21 @@ export default function LoginView() {
             setState("success");
         }
     }, [email]);
+
+    const handleDemo = useCallback(async () => {
+        setState("loading");
+        setErrorMsg("");
+
+        const { success } = await signInAsDemo();
+
+        if (success) {
+            // The dashboard sends users without routines to onboarding.
+            router.push("/dashboard");
+        } else {
+            setState("error");
+            setErrorMsg("No pudimos iniciar la demo. Probá de nuevo.");
+        }
+    }, [router]);
 
     const handleGoogleLogin = useCallback(async () => {
         setState("loading");
@@ -151,6 +169,15 @@ export default function LoginView() {
                             ) : (
                                 "Enviar Magic Link"
                             )}
+                        </button>
+
+                        {/* Demo */}
+                        <button
+                            onClick={handleDemo}
+                            disabled={state === "loading"}
+                            className="w-full h-14 mt-3 rounded-xl border border-zinc-700 hover:bg-zinc-800 active:scale-[0.98] font-semibold text-zinc-300 text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Probar demo sin registrarte
                         </button>
                     </>
                 )}
