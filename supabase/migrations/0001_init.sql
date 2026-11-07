@@ -1,15 +1,28 @@
 -- ===========================================================
--- J-GYM — Supabase Schema
+-- J-GYM - Initial schema (idempotent)
 --
--- Dos tablas principales:
---   1. routine_templates:  "El Plan" (plantilla semanal)
---   2. workout_logs:       "El Pasado" (registro inmutable)
+-- Tables:
+--   1. routine_templates: weekly plan template per user and day
+--   2. workout_logs:      history of performed workouts
 --
--- Ambas usan JSONB para los ejercicios, evitando tablas extra.
--- RLS habilitado: cada usuario solo ve/modifica sus datos.
+-- Exercises are stored as JSONB to avoid extra tables.
+-- RLS is enabled: each user can only access their own rows.
+-- Policies use auth.uid(), so they also apply to Supabase
+-- anonymous users (role `authenticated` with their own uid).
+-- Safe to run multiple times.
 -- ===========================================================
 
--- ─── routine_templates ─────────────────────────────────────
+-- --- Shared trigger function ---------------------------------
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- --- routine_templates ---------------------------------------
 
 CREATE TABLE IF NOT EXISTS routine_templates (
   id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -19,16 +32,25 @@ CREATE TABLE IF NOT EXISTS routine_templates (
   created_at  TIMESTAMPTZ DEFAULT now(),
   updated_at  TIMESTAMPTZ DEFAULT now(),
 
-  -- Un usuario solo puede tener un template por día
+  -- One template per user per day
   UNIQUE(user_id, day_name)
 );
 
--- Índice para búsquedas frecuentes por user + día
 CREATE INDEX IF NOT EXISTS idx_routine_templates_user_day
   ON routine_templates(user_id, day_name);
 
--- RLS
+DROP TRIGGER IF EXISTS update_routine_templates_updated_at ON routine_templates;
+CREATE TRIGGER update_routine_templates_updated_at
+  BEFORE UPDATE ON routine_templates
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 ALTER TABLE routine_templates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own templates" ON routine_templates;
+DROP POLICY IF EXISTS "Users can insert own templates" ON routine_templates;
+DROP POLICY IF EXISTS "Users can update own templates" ON routine_templates;
+DROP POLICY IF EXISTS "Users can delete own templates" ON routine_templates;
 
 CREATE POLICY "Users can view own templates"
   ON routine_templates FOR SELECT
@@ -46,22 +68,7 @@ CREATE POLICY "Users can delete own templates"
   ON routine_templates FOR DELETE
   USING (auth.uid() = user_id);
 
--- Trigger para actualizar updated_at automáticamente
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_routine_templates_updated_at
-  BEFORE UPDATE ON routine_templates
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-
--- ─── workout_logs ──────────────────────────────────────────
+-- --- workout_logs --------------------------------------------
 
 CREATE TABLE IF NOT EXISTS workout_logs (
   id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -73,12 +80,14 @@ CREATE TABLE IF NOT EXISTS workout_logs (
   created_at    TIMESTAMPTZ DEFAULT now()
 );
 
--- Índice para búsquedas por user + fecha
 CREATE INDEX IF NOT EXISTS idx_workout_logs_user_date
   ON workout_logs(user_id, date);
 
--- RLS
 ALTER TABLE workout_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own logs" ON workout_logs;
+DROP POLICY IF EXISTS "Users can insert own logs" ON workout_logs;
+DROP POLICY IF EXISTS "Users can delete own logs" ON workout_logs;
 
 CREATE POLICY "Users can view own logs"
   ON workout_logs FOR SELECT
@@ -88,12 +97,13 @@ CREATE POLICY "Users can insert own logs"
   ON workout_logs FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
--- Los logs son inmutables, no se permiten updates ni deletes
--- (si se necesitara, se puede agregar después)
-
+-- Needed by the app's reset-data action (dev only). Logs are never updated.
+CREATE POLICY "Users can delete own logs"
+  ON workout_logs FOR DELETE
+  USING (auth.uid() = user_id);
 
 -- ===========================================================
--- JSONB Structure Reference
+-- JSONB structure reference
 -- ===========================================================
 --
 -- routine_templates.exercises:
@@ -102,9 +112,7 @@ CREATE POLICY "Users can insert own logs"
 --     "exercise_id":   "uuid",
 --     "exercise_name": "Dominadas",
 --     "sets": [
---       { "set_number": 1, "target_reps": 12, "target_weight": 0 },
---       { "set_number": 2, "target_reps": 12, "target_weight": 0 },
---       { "set_number": 3, "target_reps": 12, "target_weight": 0 }
+--       { "set_number": 1, "target_reps": 12, "target_weight": 0 }
 --     ]
 --   }
 -- ]
@@ -115,8 +123,7 @@ CREATE POLICY "Users can insert own logs"
 --     "exercise_id":   "uuid",
 --     "exercise_name": "Dominadas",
 --     "sets": [
---       { "set_number": 1, "actual_reps": 10, "actual_weight": 0 },
---       { "set_number": 2, "actual_reps": 8,  "actual_weight": 0 }
+--       { "set_number": 1, "actual_reps": 10, "actual_weight": 0 }
 --     ]
 --   }
 -- ]
