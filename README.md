@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# J-GYM
 
-## Getting Started
+Mobile-first workout tracker (PWA) that applies **progressive overload** automatically: you log your sets, it decides next week's scheme.
 
-First, run the development server:
+**Live:** https://juangym.vercel.app · press **"Probar demo sin registrarte"** to try it without an account.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+The UI is in Spanish.
+
+## Features
+
+- **Sign in** with an email magic link, or start an anonymous demo session.
+- **Onboarding:** pick your training days, start from a default routine or build your own.
+- **Weekly calendar** with the routine of the day and a motivational quote on rest days.
+- **Workout session:** log reps and weight per set, then finish to save an immutable log.
+- **Personal records** detected when a session beats your previous best weight.
+- **Progressive overload engine** updates the next session's scheme from your performance.
+- **Installable PWA** (manifest + service worker).
+
+### Overload rule (Standard Hypertrophy)
+
+| Current scheme | Result | Next scheme |
+|---|---|---|
+| 3x12 | All reps completed | 4x8, same weight |
+| 4x8 | Reaches 4x12 | 3x8 with a weight increase entered by the user |
+| Any | Misses the minimum reps | Keep the current scheme |
+
+Weight increases are always entered by the user; the app never suggests a weight.
+
+## Stack
+
+Next.js 16 (App Router, server actions) · React 19 · TypeScript (strict) · Tailwind CSS 4 · Zustand · Supabase (Postgres, Auth, Row Level Security) · next-pwa · Jest · GitHub Actions · Vercel.
+
+## Architecture
+
+Clean Architecture, with dependencies pointing inwards:
+
+```
+src/
+├── core/            Pure business logic, no framework imports
+│   ├── domain/      Entities and pure helpers
+│   ├── strategies/  Overload algorithms (Strategy pattern)
+│   ├── use-cases/   evaluate-overload, detect-personal-records
+│   └── constants/   Default routines, quotes
+├── infrastructure/  Adapters: Supabase repositories (Repository pattern) and auth clients
+├── presentation/    React components and Zustand stores
+├── app/             Routes and server actions
+└── proxy.ts         Route protection (Next 16 proxy)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Every table has Row Level Security: users only read and write their own rows (`auth.uid() = user_id`), including anonymous demo users. Schema: [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Run locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Requirements: Node 20+ and a Supabase project (the free tier works).
 
-## Learn More
+1. In Supabase, open the SQL editor and run `supabase/migrations/0001_init.sql` (it is idempotent).
+2. In **Authentication**, enable the Email provider and **anonymous sign-ins**, and add `http://localhost:3000/auth/callback` to the redirect URLs.
+3. Configure and start:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cp .env.example .env.local   # fill in the project URL and anon key
+npm install
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open http://localhost:3000.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+| Script | What it does |
+|---|---|
+| `npm run dev` | Development server (PWA disabled in dev) |
+| `npm run build` | Production build (`--webpack`, required by next-pwa) |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript, no emit |
+| `npm test` | Jest unit tests for `src/core` |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+CI runs lint, typecheck, tests and build on every push and pull request to `main`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Roadmap
+
+- Push notification reminders on training days (needs a sender and subscription storage).
+- Google sign-in.
+
+## Author
+
+Juan Saracco · [GitHub](https://github.com/saracco-juan)
