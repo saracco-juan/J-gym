@@ -128,15 +128,17 @@ export default function UserProfile() {
                         <LogOut size={16} /> Cerrar Sesión
                     </button>
 
-                    {/* Reset */}
-                    <button
-                        onClick={handleReset}
-                        disabled={isResetting}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-zinc-800 transition-all disabled:opacity-50"
-                    >
-                        <RotateCcw size={16} className={isResetting ? "animate-spin" : ""} />
-                        {isResetting ? "Reseteando..." : "Reset App (Dev)"}
-                    </button>
+                    {/* Reset (development only) */}
+                    {process.env.NODE_ENV !== "production" && (
+                        <button
+                            onClick={handleReset}
+                            disabled={isResetting}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-zinc-800 transition-all disabled:opacity-50"
+                        >
+                            <RotateCcw size={16} className={isResetting ? "animate-spin" : ""} />
+                            {isResetting ? "Reseteando..." : "Reset App (Dev)"}
+                        </button>
+                    )}
                 </div>
             )}
         </div>
