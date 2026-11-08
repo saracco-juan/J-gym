@@ -39,3 +39,11 @@ export function decideInitialPull(input: {
     if (input.alreadyPulled) return "skip";
     return input.localHasData ? "reconcile-routines" : "pull-all";
 }
+
+/** Logs older than this are not pulled; enough for PRs and overload history. */
+export const PULL_WINDOW_DAYS = 120;
+
+/** First date (YYYY-MM-DD, UTC) of the log window that is pulled. */
+export function pullWindowStart(nowMs: number, days: number = PULL_WINDOW_DAYS): string {
+    return new Date(nowMs - days * 86_400_000).toISOString().slice(0, 10);
+}

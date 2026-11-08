@@ -300,3 +300,30 @@ describe("triggers", () => {
         expect(seen[seen.length - 1]).toBe("idle");
     });
 });
+
+describe("initial pull hook", () => {
+    it("runs the pull before pushing and reports a failing pull as offline", async () => {
+        const order: string[] = [];
+        const pull = jest.fn(async () => {
+            order.push("pull");
+        });
+        engine = makeEngine({ pull });
+        await repos.routines.save(routine);
+        const originalExecute = transport.execute.bind(transport);
+        transport.execute = async (c) => {
+            order.push("push");
+            return originalExecute(c);
+        };
+        await engine.flush();
+        expect(pull).toHaveBeenCalledWith("u1");
+        expect(order).toEqual(["pull", "push"]);
+
+        engine = makeEngine({
+            pull: async () => {
+                throw new SyncTransportError("Failed to fetch", 0);
+            },
+        });
+        await engine.flush();
+        expect(engine.getState().status).toBe("offline");
+    });
+});
