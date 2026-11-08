@@ -6,6 +6,12 @@ Mobile-first workout tracker (PWA) that applies **progressive overload** automat
 
 The UI is in Spanish.
 
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Dashboard with the weekly calendar and today's routine" width="300">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/workout.png" alt="Active workout session with a personal record badge" width="300">
+</p>
+
 ## Features
 
 - **Sign in** with an email magic link, or start an anonymous demo session.
