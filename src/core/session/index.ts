@@ -14,3 +14,12 @@ export { evaluateSession } from "./evaluate-session";
 export type { SessionEvaluation } from "./evaluate-session";
 export { finalizeSession, pendingWeightKeys } from "./finalize-session";
 export type { FinalizeInput, FinalizeResult } from "./finalize-session";
+export {
+    exerciseStatusLabel,
+    formatExerciseScheme,
+    formatSetValue,
+    formatWeight,
+    parseSetInput,
+    weightFieldLabel,
+} from "./display";
+export type { StatusLabel, StatusTone } from "./display";
