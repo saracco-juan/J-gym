@@ -1,4 +1,6 @@
 import {
+    countUnloggedExercises,
+    exerciseCardStatus,
     exerciseStatusLabel,
     formatSetValue,
     formatExerciseScheme,
@@ -123,5 +125,55 @@ describe("parseSetInput", () => {
         expect(parseSetInput("12", "", true)).toEqual({ reps: 12, weight: 0 });
         expect(parseSetInput("12", "0", true)).toEqual({ reps: 12, weight: 0 });
         expect(parseSetInput("12", "abc", true)).toBeNull();
+    });
+});
+
+describe("exerciseCardStatus", () => {
+    const logged = { reps: 8, weight: 20 };
+
+    it("shows nothing for an untouched exercise", () => {
+        expect(exerciseCardStatus(exercise({ sets: [set(1, 8, 20)] }))).toBeNull();
+    });
+
+    it("shows completed when every planned set met its targets", () => {
+        const e = exercise({ sets: [{ ...set(1, 8, 20), logged }] });
+        expect(exerciseCardStatus(e)).toEqual({ label: "Completado", tone: "success" });
+    });
+
+    it("shows incomplete when logged below target", () => {
+        const e = exercise({ sets: [{ ...set(1, 8, 20), logged: { reps: 6, weight: 20 } }, set(2, 8, 20)] });
+        expect(exerciseCardStatus(e)).toEqual({ label: "Incompleto", tone: "warning" });
+    });
+
+    it("shows skipped only when the user skipped it", () => {
+        const e = exercise({ skipped: true, sets: [set(1, 8, 20)] });
+        expect(exerciseCardStatus(e)).toEqual({ label: "Salteado", tone: "muted" });
+    });
+
+    it("shows added for an added exercise with logged sets", () => {
+        const e = exercise({ origin: "added", sets: [{ ...set(1, 0, 0), planned: false, logged }] });
+        expect(exerciseCardStatus(e)).toEqual({ label: "Agregado", tone: "info" });
+    });
+});
+
+describe("countUnloggedExercises", () => {
+    const logged = { reps: 8, weight: 20 };
+
+    it("counts visible exercises with nothing logged and not skipped on purpose", () => {
+        const state = {
+            exercises: [
+                exercise({ key: "a", sets: [{ ...set(1, 8, 20), logged }] }),
+                exercise({ key: "b", sets: [set(1, 8, 20)] }),
+                exercise({ key: "c", skipped: true, sets: [set(1, 8, 20)] }),
+                exercise({ key: "d", replacedBy: "e", sets: [set(1, 8, 20)] }),
+                exercise({ key: "e", origin: "replacement", sets: [set(1, 8, 0)] }),
+            ],
+        };
+        expect(countUnloggedExercises(state)).toBe(2);
+    });
+
+    it("is zero when everything was logged", () => {
+        const state = { exercises: [exercise({ sets: [{ ...set(1, 8, 20), logged }] })] };
+        expect(countUnloggedExercises(state)).toBe(0);
     });
 });

@@ -4,7 +4,8 @@
  */
 
 import type { ExerciseLogStatus } from "../domain/log-status";
-import type { SessionExercise } from "./types";
+import { deriveExerciseStatus } from "./derive-exercise-status";
+import type { SessionExercise, SessionState } from "./types";
 
 export type StatusTone = "success" | "warning" | "muted" | "info";
 
@@ -52,6 +53,26 @@ const STATUS_LABELS: Record<ExerciseLogStatus, StatusLabel> = {
 
 export function exerciseStatusLabel(status: ExerciseLogStatus): StatusLabel {
     return STATUS_LABELS[status];
+}
+
+/**
+ * Status badge for an exercise card, or null while the exercise is untouched
+ * (nothing logged and not skipped on purpose), so fresh cards stay clean.
+ */
+export function exerciseCardStatus(exercise: SessionExercise): StatusLabel | null {
+    const touched = exercise.skipped || exercise.sets.some((s) => s.logged !== null);
+    if (!touched) return null;
+    return exerciseStatusLabel(deriveExerciseStatus(exercise));
+}
+
+/**
+ * Visible exercises (not swapped out) with nothing logged that the user did
+ * not skip on purpose. Finishing saves them as skipped.
+ */
+export function countUnloggedExercises(state: SessionState): number {
+    return state.exercises.filter(
+        (e) => e.replacedBy === null && !e.skipped && e.sets.every((s) => s.logged === null)
+    ).length;
 }
 
 /** For bodyweight lifts the weight is optional added load ("lastre"). */

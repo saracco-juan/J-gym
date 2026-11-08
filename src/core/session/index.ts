@@ -15,6 +15,8 @@ export type { SessionEvaluation } from "./evaluate-session";
 export { finalizeSession, pendingWeightKeys } from "./finalize-session";
 export type { FinalizeInput, FinalizeResult } from "./finalize-session";
 export {
+    countUnloggedExercises,
+    exerciseCardStatus,
     exerciseStatusLabel,
     formatExerciseScheme,
     formatSetValue,
