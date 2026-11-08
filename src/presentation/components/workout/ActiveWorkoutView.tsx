@@ -16,12 +16,21 @@ import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import ExerciseCard from "./ExerciseCard";
 import ExercisePicker from "./ExercisePicker";
 import FinishConfirmDialog from "./FinishConfirmDialog";
+import TipsSheet from "./TipsSheet";
 import WeightInputModal from "./WeightInputModal";
 import { useFinishWorkout } from "./useFinishWorkout";
 import { Dumbbell, Plus, Trophy } from "lucide-react";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
 import { loadPersonalBests } from "@/infrastructure/local/queries";
+import { getCatalogExercise, type ExerciseRef } from "@/core/catalog";
 import { countUnloggedExercises, type ExerciseDescriptor } from "@/core/session";
+
+/** Technique tips exist only for catalog exercises. */
+function tipsFor(ref: ExerciseRef): readonly string[] | null {
+    if (ref.source !== "catalog") return null;
+    const tips = getCatalogExercise(ref.id)?.tipsEs;
+    return tips && tips.length > 0 ? tips : null;
+}
 
 export default function ActiveWorkoutView() {
     const session = useWorkoutStore((s) => s.session);
@@ -33,6 +42,7 @@ export default function ActiveWorkoutView() {
     const [prs, setPrs] = useState<Record<string, number>>({});
     const [isRestoring, setIsRestoring] = useState(true);
     const [confirmingFinish, setConfirmingFinish] = useState(false);
+    const [tipsKey, setTipsKey] = useState<string | null>(null);
     /** Exercise picker: adding at the end, or replacing the exercise with this key. */
     const [picker, setPicker] = useState<{ mode: "add" } | { mode: "replace"; key: string } | null>(null);
 
@@ -126,6 +136,9 @@ export default function ActiveWorkoutView() {
     const pickerTarget =
         picker?.mode === "replace" ? session.exercises.find((e) => e.key === picker.key) : undefined;
 
+    const tipsExercise = session.exercises.find((e) => e.key === tipsKey);
+    const tips = tipsExercise ? tipsFor(tipsExercise.ref) : null;
+
     const nameOf = (key?: string) => session.exercises.find((e) => e.key === key)?.name;
 
     return (
@@ -189,6 +202,7 @@ export default function ActiveWorkoutView() {
                             dispatch({ type: "completeAllAsPlanned", exerciseKey: exercise.key })
                         }
                         onSkip={() => dispatch({ type: "skipExercise", exerciseKey: exercise.key })}
+                        onShowTips={tipsFor(exercise.ref) ? () => setTipsKey(exercise.key) : undefined}
                         onReplace={
                             exercise.origin === "added"
                                 ? undefined
@@ -224,6 +238,14 @@ export default function ActiveWorkoutView() {
                     )}
                 </button>
             </div>
+
+            {tipsExercise && tips && (
+                <TipsSheet
+                    exerciseName={tipsExercise.name}
+                    tips={tips}
+                    onClose={() => setTipsKey(null)}
+                />
+            )}
 
             {picker && (
                 <ExercisePicker
