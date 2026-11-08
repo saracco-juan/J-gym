@@ -6,6 +6,8 @@
 
 import type { IRoutineExercise, IRoutineTemplate, IWorkoutLog } from "@/core/domain";
 import { dayNameForDate, isPastDate } from "@/core/schedule";
+import { finalizeSession, type FinalizeResult, type SessionState } from "@/core/session";
+import type { IOverloadStrategy } from "@/core/strategies";
 import { computePersonalBests } from "@/core/use-cases";
 import type { LocalRepositories } from "./localRepositories";
 
@@ -84,4 +86,51 @@ export async function resetUserData(repos: LocalRepositories, userId: string): P
         await repos.customExercises.remove(ex.id);
     }
     await repos.activeSession.clear(userId);
+}
+
+export interface FinishWorkoutInput {
+    userId: string;
+    /** Session state at finish time. */
+    routineId: string;
+    /** Session meta of the day: the log id is fixed at start so retries upsert the same log. */
+    state: SessionState;
+    logId: string;
+    date: string;
+    completedAtIso: string;
+    strategy: IOverloadStrategy;
+    weightOverrides: Record<string, number>;
+}
+
+/**
+ * Finish pipeline against the local database: evaluate (pure) -> save log
+ * and overload-updated routine -> clear the active session, all committed
+ * in one transaction that also enqueues both for sync. Finishing the same
+ * session twice (same `logId`) overwrites the same log.
+ */
+export async function finishWorkoutLocally(
+    repos: LocalRepositories,
+    input: FinishWorkoutInput
+): Promise<FinalizeResult> {
+    const routine: IRoutineTemplate = (await repos.routines.get(input.routineId)) ?? {
+        id: input.routineId,
+        userId: input.userId,
+        dayName: "",
+        exercises: [],
+    };
+    const previousBests = computePersonalBests(
+        (await repos.workoutLogs.listByUser(input.userId)).filter((l) => l.id !== input.logId)
+    );
+    const result = finalizeSession({
+        state: input.state,
+        routine,
+        userId: input.userId,
+        logId: input.logId,
+        date: input.date,
+        completedAtIso: input.completedAtIso,
+        strategy: input.strategy,
+        weightOverrides: input.weightOverrides,
+        previousBests,
+    });
+    await repos.workoutLogs.commitWorkout(input.userId, result.log, result.updatedRoutine);
+    return result;
 }

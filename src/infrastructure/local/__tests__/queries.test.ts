@@ -1,8 +1,11 @@
 import "fake-indexeddb/auto";
 import type { IRoutineExercise, IRoutineTemplate, IWorkoutLog } from "@/core/domain";
+import { createSession, sessionReducer } from "@/core/session";
+import { StandardHypertrophyStrategy } from "@/core/strategies";
 import { JgymDatabase } from "../db";
 import { createLocalRepositories, type LocalRepositories } from "../localRepositories";
 import {
+    finishWorkoutLocally,
     hasRoutines,
     loadDayData,
     loadPersonalBests,
@@ -128,5 +131,52 @@ describe("resetUserData", () => {
         const entries = await repos.outbox.list();
         expect(entries.every((e) => e.op === "delete")).toBe(true);
         expect(entries).toHaveLength(2);
+    });
+});
+
+describe("finishWorkoutLocally", () => {
+    const strategy = new StandardHypertrophyStrategy();
+    const finishInput = (overrides: Record<string, number> = {}) => ({
+        userId: "u1",
+        routineId: "r1",
+        state: sessionReducer(createSession(monday.exercises), {
+            type: "completeAllAsPlanned",
+            exerciseKey: "bench",
+        }),
+        logId: "log-fixed",
+        date: "2026-01-05",
+        completedAtIso: "2026-01-05T10:00:00.000Z",
+        strategy,
+        weightOverrides: overrides,
+    });
+
+    it("saves log and updated routine in one commit and clears the active session", async () => {
+        await repos.routines.save(monday);
+        await repos.workoutLogs.save(log("old", "2026-01-01", 50));
+        await repos.activeSession.put("u1", createSession(monday.exercises));
+
+        const result = await finishWorkoutLocally(repos, finishInput());
+
+        expect(result.newPRs).toEqual(["Press banca"]);
+        expect(await repos.workoutLogs.get("log-fixed")).toMatchObject({ templateId: "r1", userId: "u1" });
+        expect((await repos.routines.get("r1"))?.exercises[0].sets).toHaveLength(2);
+        expect(await repos.activeSession.get("u1")).toBeUndefined();
+        const pending = (await repos.outbox.list()).map((e) => `${e.entity}:${e.entityId}`);
+        expect(pending).toEqual(expect.arrayContaining(["workoutLog:log-fixed", "routine:r1"]));
+    });
+
+    it("is idempotent when the same session is finished twice (same log id)", async () => {
+        await repos.routines.save(monday);
+        await finishWorkoutLocally(repos, finishInput());
+        await finishWorkoutLocally(repos, finishInput());
+        const logs = await repos.workoutLogs.listByUser("u1");
+        expect(logs.filter((l) => l.id === "log-fixed")).toHaveLength(1);
+    });
+
+    it("still saves the log when the routine no longer exists", async () => {
+        const result = await finishWorkoutLocally(repos, finishInput());
+        expect(result.log.id).toBe("log-fixed");
+        expect(await repos.workoutLogs.get("log-fixed")).toBeDefined();
+        expect(await repos.routines.get("r1")).toBeUndefined();
     });
 });

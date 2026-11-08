@@ -24,6 +24,8 @@ export interface ActiveSessionMeta {
     /** Local calendar date (YYYY-MM-DD) the workout started on. */
     date: string;
     startedAt: number;
+    /** Fixed at start so finishing twice upserts the same log. */
+    logId: string;
 }
 
 /** In-progress workout. One per user: `key` is the userId. */
