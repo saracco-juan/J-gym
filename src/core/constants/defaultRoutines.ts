@@ -17,6 +17,8 @@ import type { IRoutineExercise } from "@/core/domain/routine-template";
 
 interface SeedExercise {
     name: string;
+    /** Stable id of the matching entry in the exercise catalog. */
+    catalogId: string;
     sets: number;
     reps: number;
     weight: number;
@@ -44,57 +46,57 @@ const GYM_ROUTINE: DefaultRoutine = {
         {
             label: "Piernas / Hombros",
             exercises: [
-                { name: "Sentadilla smith", sets: 0, reps: 0, weight: 0 },
-                { name: "Cuádriceps", sets: 0, reps: 0, weight: 0 },
-                { name: "Isquios", sets: 0, reps: 0, weight: 0 },
-                { name: "Gemelos", sets: 0, reps: 0, weight: 0 },
-                { name: "Prensa", sets: 0, reps: 0, weight: 0 },
-                { name: "Press militar c/máquina", sets: 0, reps: 0, weight: 0 },
-                { name: "Vuelo lateral", sets: 0, reps: 0, weight: 0 },
+                { name: "Sentadilla smith", catalogId: "smith-squat", sets: 0, reps: 0, weight: 0 },
+                { name: "Cuádriceps", catalogId: "leg-extension", sets: 0, reps: 0, weight: 0 },
+                { name: "Isquios", catalogId: "leg-curl", sets: 0, reps: 0, weight: 0 },
+                { name: "Gemelos", catalogId: "calf-raise", sets: 0, reps: 0, weight: 0 },
+                { name: "Prensa", catalogId: "leg-press", sets: 0, reps: 0, weight: 0 },
+                { name: "Press militar c/máquina", catalogId: "machine-shoulder-press", sets: 0, reps: 0, weight: 0 },
+                { name: "Vuelo lateral", catalogId: "lateral-raise", sets: 0, reps: 0, weight: 0 },
             ],
         },
         {
             label: "Espalda / Bíceps",
             exercises: [
-                { name: "Dominadas", sets: 0, reps: 0, weight: 0 },
-                { name: "Dorsalera", sets: 0, reps: 0, weight: 0 },
-                { name: "Remo", sets: 0, reps: 0, weight: 0 },
-                { name: "Pull c/mancuerna", sets: 0, reps: 0, weight: 0 },
-                { name: "Martillo doble", sets: 0, reps: 0, weight: 0 },
-                { name: "Scott", sets: 0, reps: 0, weight: 0 },
+                { name: "Dominadas", catalogId: "pull-up", sets: 0, reps: 0, weight: 0 },
+                { name: "Dorsalera", catalogId: "lat-pulldown", sets: 0, reps: 0, weight: 0 },
+                { name: "Remo", catalogId: "seated-cable-row", sets: 0, reps: 0, weight: 0 },
+                { name: "Pull c/mancuerna", catalogId: "dumbbell-row", sets: 0, reps: 0, weight: 0 },
+                { name: "Martillo doble", catalogId: "hammer-curl", sets: 0, reps: 0, weight: 0 },
+                { name: "Scott", catalogId: "preacher-curl", sets: 0, reps: 0, weight: 0 },
             ],
         },
         {
             label: "Pecho / Tríceps",
             exercises: [
-                { name: "Press banca", sets: 0, reps: 0, weight: 0 },
-                { name: "Press inclinado", sets: 0, reps: 0, weight: 0 },
-                { name: "Aperturas", sets: 0, reps: 0, weight: 0 },
-                { name: "Flexiones", sets: 0, reps: 0, weight: 0 },
-                { name: "Canguro", sets: 0, reps: 0, weight: 0 },
-                { name: "Polea tríceps", sets: 0, reps: 0, weight: 0 },
+                { name: "Press banca", catalogId: "bench-press", sets: 0, reps: 0, weight: 0 },
+                { name: "Press inclinado", catalogId: "incline-bench-press", sets: 0, reps: 0, weight: 0 },
+                { name: "Aperturas", catalogId: "dumbbell-fly", sets: 0, reps: 0, weight: 0 },
+                { name: "Flexiones", catalogId: "push-up", sets: 0, reps: 0, weight: 0 },
+                { name: "Canguro", catalogId: "triceps-kickback", sets: 0, reps: 0, weight: 0 },
+                { name: "Polea tríceps", catalogId: "triceps-pushdown", sets: 0, reps: 0, weight: 0 },
             ],
         },
         {
             label: "Brazos",
             exercises: [
-                { name: "Curl barra", sets: 0, reps: 0, weight: 0 },
-                { name: "Martillo alterno", sets: 0, reps: 0, weight: 0 },
-                { name: "Predicador", sets: 0, reps: 0, weight: 0 },
-                { name: "Fondos tríceps", sets: 0, reps: 0, weight: 0 },
-                { name: "Press francés", sets: 0, reps: 0, weight: 0 },
-                { name: "Extensión polea", sets: 0, reps: 0, weight: 0 },
+                { name: "Curl barra", catalogId: "barbell-curl", sets: 0, reps: 0, weight: 0 },
+                { name: "Martillo alterno", catalogId: "alternating-hammer-curl", sets: 0, reps: 0, weight: 0 },
+                { name: "Predicador", catalogId: "preacher-curl", sets: 0, reps: 0, weight: 0 },
+                { name: "Fondos tríceps", catalogId: "dips", sets: 0, reps: 0, weight: 0 },
+                { name: "Press francés", catalogId: "skull-crusher", sets: 0, reps: 0, weight: 0 },
+                { name: "Extensión polea", catalogId: "triceps-pushdown", sets: 0, reps: 0, weight: 0 },
             ],
         },
         {
             label: "Pecho / Espalda (Variante)",
             exercises: [
-                { name: "Press pecho c/mancuerna", sets: 0, reps: 0, weight: 0 },
-                { name: "Cruce de poleas", sets: 0, reps: 0, weight: 0 },
-                { name: "Pullover", sets: 0, reps: 0, weight: 0 },
-                { name: "Remo c/mancuerna", sets: 0, reps: 0, weight: 0 },
-                { name: "Jalón agarre cerrado", sets: 0, reps: 0, weight: 0 },
-                { name: "Face pull", sets: 0, reps: 0, weight: 0 },
+                { name: "Press pecho c/mancuerna", catalogId: "dumbbell-bench-press", sets: 0, reps: 0, weight: 0 },
+                { name: "Cruce de poleas", catalogId: "cable-crossover", sets: 0, reps: 0, weight: 0 },
+                { name: "Pullover", catalogId: "dumbbell-pullover", sets: 0, reps: 0, weight: 0 },
+                { name: "Remo c/mancuerna", catalogId: "dumbbell-row", sets: 0, reps: 0, weight: 0 },
+                { name: "Jalón agarre cerrado", catalogId: "close-grip-pulldown", sets: 0, reps: 0, weight: 0 },
+                { name: "Face pull", catalogId: "face-pull", sets: 0, reps: 0, weight: 0 },
             ],
         },
     ],
@@ -107,6 +109,7 @@ export const DEFAULT_ROUTINES: DefaultRoutine[] = [GYM_ROUTINE];
 function buildExercises(defs: SeedExercise[]): IRoutineExercise[] {
     return defs.map((def) => ({
         exercise: { id: crypto.randomUUID(), name: def.name },
+        ref: { source: "catalog", id: def.catalogId },
         sets:
             def.sets > 0
                 ? Array.from({ length: def.sets }, (_, i) => ({
