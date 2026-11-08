@@ -14,13 +14,14 @@ import { useState, useEffect } from "react";
 import { useWorkoutStore } from "@/presentation/stores/useWorkoutStore";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import ExerciseCard from "./ExerciseCard";
+import ExercisePicker from "./ExercisePicker";
 import FinishConfirmDialog from "./FinishConfirmDialog";
 import WeightInputModal from "./WeightInputModal";
 import { useFinishWorkout } from "./useFinishWorkout";
-import { Dumbbell, Trophy } from "lucide-react";
+import { Dumbbell, Plus, Trophy } from "lucide-react";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
 import { loadPersonalBests } from "@/infrastructure/local/queries";
-import { countUnloggedExercises } from "@/core/session";
+import { countUnloggedExercises, type ExerciseDescriptor } from "@/core/session";
 
 export default function ActiveWorkoutView() {
     const session = useWorkoutStore((s) => s.session);
@@ -32,6 +33,8 @@ export default function ActiveWorkoutView() {
     const [prs, setPrs] = useState<Record<string, number>>({});
     const [isRestoring, setIsRestoring] = useState(true);
     const [confirmingFinish, setConfirmingFinish] = useState(false);
+    /** Exercise picker: adding at the end, or replacing the exercise with this key. */
+    const [picker, setPicker] = useState<{ mode: "add" } | { mode: "replace"; key: string } | null>(null);
 
     // ─── Restore a persisted session (app killed or reloaded) ─
 
@@ -106,6 +109,23 @@ export default function ActiveWorkoutView() {
         else handleFinish();
     };
 
+    const handlePick = (exercise: ExerciseDescriptor) => {
+        if (picker?.mode === "replace") {
+            dispatch({
+                type: "replaceExercise",
+                exerciseKey: picker.key,
+                newKey: crypto.randomUUID(),
+                exercise,
+            });
+        } else if (picker?.mode === "add") {
+            dispatch({ type: "addExercise", key: crypto.randomUUID(), exercise });
+        }
+        setPicker(null);
+    };
+
+    const pickerTarget =
+        picker?.mode === "replace" ? session.exercises.find((e) => e.key === picker.key) : undefined;
+
     const nameOf = (key?: string) => session.exercises.find((e) => e.key === key)?.name;
 
     return (
@@ -169,8 +189,22 @@ export default function ActiveWorkoutView() {
                             dispatch({ type: "completeAllAsPlanned", exerciseKey: exercise.key })
                         }
                         onSkip={() => dispatch({ type: "skipExercise", exerciseKey: exercise.key })}
+                        onReplace={
+                            exercise.origin === "added"
+                                ? undefined
+                                : () => setPicker({ mode: "replace", key: exercise.key })
+                        }
                     />
                 ))}
+
+                <button
+                    type="button"
+                    onClick={() => setPicker({ mode: "add" })}
+                    className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-dashed border-zinc-700 text-sm font-semibold text-zinc-300 hover:bg-zinc-900 active:scale-[0.98]"
+                    aria-label="Agregar ejercicio"
+                >
+                    <Plus size={16} /> Agregar ejercicio
+                </button>
             </div>
 
             {/* Finish button (fixed bottom) */}
@@ -190,6 +224,15 @@ export default function ActiveWorkoutView() {
                     )}
                 </button>
             </div>
+
+            {picker && (
+                <ExercisePicker
+                    mode={picker.mode}
+                    exclude={pickerTarget ? [pickerTarget.ref] : undefined}
+                    onSelect={handlePick}
+                    onClose={() => setPicker(null)}
+                />
+            )}
 
             {confirmingFinish && (
                 <FinishConfirmDialog
