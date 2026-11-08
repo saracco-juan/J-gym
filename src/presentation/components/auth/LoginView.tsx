@@ -16,17 +16,19 @@ import { signInAsDemo } from "@/infrastructure/auth/demoSignIn";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
 import { Dumbbell, Mail } from "lucide-react";
 
-type LoginState = "idle" | "loading" | "success" | "error";
+// Each action has its own pending state so only the clicked button shows progress.
+type LoginState = "idle" | "sending-link" | "starting-demo" | "success" | "error";
 
 export default function LoginView() {
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [state, setState] = useState<LoginState>("idle");
     const [errorMsg, setErrorMsg] = useState("");
+    const isBusy = state === "sending-link" || state === "starting-demo";
 
     const handleMagicLink = useCallback(async () => {
         if (!email.trim()) return;
-        setState("loading");
+        setState("sending-link");
         setErrorMsg("");
 
         const supabase = createSupabaseBrowserClient();
@@ -46,7 +48,7 @@ export default function LoginView() {
     }, [email]);
 
     const handleDemo = useCallback(async () => {
-        setState("loading");
+        setState("starting-demo");
         setErrorMsg("");
 
         const { success } = await signInAsDemo();
@@ -111,7 +113,7 @@ export default function LoginView() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleMagicLink()}
-                            disabled={state === "loading"}
+                            disabled={isBusy}
                             className="w-full h-14 rounded-xl bg-zinc-800 border border-zinc-700 px-4 text-base text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:opacity-50"
                             aria-label="Email para magic link"
                         />
@@ -122,10 +124,10 @@ export default function LoginView() {
 
                         <button
                             onClick={handleMagicLink}
-                            disabled={state === "loading" || !email.trim()}
+                            disabled={isBusy || !email.trim()}
                             className="w-full h-14 mt-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] font-bold text-white text-base transition-all disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed"
                         >
-                            {state === "loading" ? (
+                            {state === "sending-link" ? (
                                 <span className="flex items-center justify-center gap-2">
                                     <span className="h-4 w-4 rounded-full border-2 border-zinc-400 border-t-transparent animate-spin" />
                                     Enviando...
@@ -138,10 +140,17 @@ export default function LoginView() {
                         {/* Demo */}
                         <button
                             onClick={handleDemo}
-                            disabled={state === "loading"}
+                            disabled={isBusy}
                             className="w-full h-14 mt-3 rounded-xl border border-zinc-700 hover:bg-zinc-800 active:scale-[0.98] font-semibold text-zinc-300 text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Probar demo sin registrarte
+                            {state === "starting-demo" ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <span className="h-4 w-4 rounded-full border-2 border-zinc-400 border-t-transparent animate-spin" />
+                                    Iniciando demo...
+                                </span>
+                            ) : (
+                                "Probar demo sin registrarte"
+                            )}
                         </button>
                     </>
                 )}
