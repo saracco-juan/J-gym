@@ -54,7 +54,6 @@ interface WorkoutActions {
     /** Loads a persisted session. Resolves false when there is none. */
     restoreWorkout: (userId: string) => Promise<boolean>;
     dispatch: (action: SessionAction) => SessionRejection | null;
-    logSet: (exerciseKey: string, setIndex: number, reps: number, weight: number) => void;
     finishWorkout: () => void;
     confirmNewWeight: (exerciseKey: string, manualWeight: number) => void;
     setFinalizing: (value: boolean) => void;
@@ -126,16 +125,6 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()((set, get
         }
         set({ session: state });
         return null;
-    },
-
-    logSet: (exerciseKey, setIndex, reps, weight) => {
-        get().dispatch({
-            type: "logSet",
-            exerciseKey,
-            setNumber: setIndex + 1,
-            reps,
-            weight,
-        });
     },
 
     finishWorkout: () => {
