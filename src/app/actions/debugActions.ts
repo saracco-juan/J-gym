@@ -18,6 +18,10 @@ interface ActionResult {
  * El usuario queda como si fuera nuevo → redirect a /onboarding.
  */
 export async function resetUserAppData(): Promise<ActionResult> {
+    if (process.env.NODE_ENV === "production") {
+        return { success: false, error: "Acción no disponible en producción." };
+    }
+
     try {
         const supabase = await createSupabaseServerClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();

@@ -8,7 +8,7 @@
 import type { IExercise, ISetResult } from "./exercises";
 
 /** Serie realizada en un ejercicio durante el entrenamiento. */
-export interface IWorkoutSet extends ISetResult { }
+export type IWorkoutSet = ISetResult;
 
 /** Un ejercicio realizado durante el entrenamiento con todas sus series. */
 export interface IWorkoutExercise {

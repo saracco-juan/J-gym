@@ -1,5 +1,5 @@
 /**
- * Next.js Middleware — Supabase session refresh & route protection.
+ * Next.js Proxy (formerly Middleware) — Supabase session refresh & route protection.
  *
  * Intercepts all requests to:
  * 1. Refresh the Supabase auth session (extend cookie TTL).
@@ -12,7 +12,7 @@
 import { type NextRequest } from "next/server";
 import { updateSession } from "@/infrastructure/auth/middlewareClient";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     return await updateSession(request);
 }
 
