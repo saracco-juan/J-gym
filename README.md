@@ -14,7 +14,7 @@ The UI is in Spanish.
 
 ## Features
 
-- **Sign in** with an email magic link, or start an anonymous demo session.
+- **Sign in** with a 6-digit code sent by email (typed inside the app, so it works in the installed PWA), or start an anonymous demo session.
 - **Onboarding:** pick your training days, start from a default routine or build your own.
 - **Weekly calendar** with the routine of the day and a motivational quote on rest days.
 - **Workout session:** log reps and weight per set, then finish to save an immutable log.
@@ -60,8 +60,9 @@ Every table has Row Level Security: users only read and write their own rows (`a
 Requirements: Node 20+ and a Supabase project (the free tier works).
 
 1. In Supabase, open the SQL editor and run `supabase/migrations/0001_init.sql` (it is idempotent).
-2. In **Authentication**, enable the Email provider and **anonymous sign-ins**, and add `http://localhost:3000/auth/callback` to the redirect URLs.
-3. Configure and start:
+2. In **Authentication**, enable the Email provider and **anonymous sign-ins**.
+3. In **Authentication > Email Templates**, edit the **Magic Link** template so the email contains the code, for example: `Tu código de acceso es: {{ .Token }}`. Login no longer uses links, so adding a redirect URL is not required (the `/auth/callback` route stays only for links sent earlier).
+4. Configure and start:
 
 ```bash
 cp .env.example .env.local   # fill in the project URL and anon key
