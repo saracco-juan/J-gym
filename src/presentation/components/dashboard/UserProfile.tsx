@@ -10,7 +10,9 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
-import { resetUserAppData } from "@/app/actions/debugActions";
+import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
+import { resetUserData } from "@/infrastructure/local/queries";
+import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import { signOutAndClear } from "@/infrastructure/sync/syncRuntime";
 import { getUserDisplay } from "@/core/domain/user-display";
 import { LogOut, RotateCcw } from "lucide-react";
@@ -33,7 +35,9 @@ export default function UserProfile() {
     useEffect(() => {
         async function load() {
             const supabase = createSupabaseBrowserClient();
-            const { data: { user: authUser } } = await supabase.auth.getUser();
+            // getSession reads local storage, so the avatar renders offline.
+            const { data: { session } } = await supabase.auth.getSession();
+            const authUser = session?.user;
             if (authUser) {
                 const display = getUserDisplay({
                     email: authUser.email,
@@ -78,15 +82,19 @@ export default function UserProfile() {
         );
         if (!confirmed) return;
 
-        setIsResetting(true);
-        const result = await resetUserAppData();
-        setIsResetting(false);
-        setOpen(false);
+        const userId = useSyncStore.getState().userId;
+        if (!userId) return;
 
-        if (result.success) {
+        setIsResetting(true);
+        try {
+            // Local reset; the deletes reach the server through the outbox.
+            await resetUserData(getLocalRepositories(), userId);
+            setOpen(false);
             router.push("/onboarding");
-        } else {
-            alert(result.error ?? "Error al resetear.");
+        } catch {
+            alert("Error al resetear.");
+        } finally {
+            setIsResetting(false);
         }
     }, [router]);
 

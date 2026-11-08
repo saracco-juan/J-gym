@@ -6,7 +6,7 @@
 import { canClearLocalData, resolveUserId } from "@/core/sync";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
-import { runInitialPull } from "./initialPull";
+import { lastPulledKey, runInitialPull } from "./initialPull";
 import { SyncEngine } from "./SyncEngine";
 import { createSupabaseTransport } from "./supabaseTransport";
 
@@ -74,4 +74,20 @@ export async function signOutAndClear(): Promise<{ cleared: boolean }> {
         return { cleared: true };
     }
     return { cleared: false };
+}
+
+/**
+ * Resolves once the first server pull for this user had its chance to run.
+ * Used before concluding "no routines, go to onboarding" on a fresh device.
+ * Offline it returns immediately: there is nothing to wait for.
+ */
+export async function waitForFirstPull(userId: string): Promise<void> {
+    const repos = getLocalRepositories();
+    if ((await repos.meta.get(lastPulledKey(userId))) !== undefined) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
+    try {
+        await getSyncEngine().flush();
+    } catch {
+        // Best effort: the dashboard decides with whatever is local.
+    }
 }

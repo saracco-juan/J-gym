@@ -13,8 +13,11 @@ import { useRouter } from "next/navigation";
 import { startOfWeek } from "date-fns";
 import WeekCalendar from "./WeekCalendar";
 import RoutineSummary from "./RoutineSummary";
-import { fetchDayData, checkHasRoutines } from "@/app/actions/dashboardActions";
-import type { DayDataResult } from "@/app/actions/dashboardActions";
+import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
+import { hasRoutines, loadDayData } from "@/infrastructure/local/queries";
+import type { DayDataResult } from "@/infrastructure/local/queries";
+import { waitForFirstPull } from "@/infrastructure/sync/syncRuntime";
+import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import { useWorkoutStore } from "@/presentation/stores/useWorkoutStore";
 import type { IRoutineTemplate } from "@/core/domain/routine-template";
 import { getDailyQuote } from "@/core/constants/quotes";
@@ -52,6 +55,9 @@ function getMondayStr(week: Date): string {
 export default function DashboardClient() {
     const router = useRouter();
     const startWorkout = useWorkoutStore((s) => s.startWorkout);
+    // undefined while resolving, null when signed out. Read from local storage:
+    // no network round trip is needed to render cached data.
+    const userId = useSyncStore((s) => s.userId);
 
     const [activeWeek, setActiveWeek] = useState<Date>(() => new Date());
     const [selectedDate, setSelectedDate] = useState(getTodayStr);
@@ -62,24 +68,40 @@ export default function DashboardClient() {
     // ─── Onboarding check ────────────────────────────────────
 
     useEffect(() => {
-        async function check() {
-            const result = await checkHasRoutines();
-            if (!result.hasRoutines && !result.error) {
+        if (userId === undefined) return;
+        if (userId === null) {
+            router.replace("/login");
+            return;
+        }
+        let cancelled = false;
+        async function check(id: string) {
+            const repos = getLocalRepositories();
+            let has = await hasRoutines(repos, id);
+            if (!has) {
+                // New device: the server may already hold this user's routines.
+                await waitForFirstPull(id);
+                has = await hasRoutines(repos, id);
+            }
+            if (cancelled) return;
+            if (!has) {
                 router.replace("/onboarding");
                 return;
             }
             setIsCheckingOnboarding(false);
         }
-        check();
-    }, [router]);
+        void check(userId);
+        return () => {
+            cancelled = true;
+        };
+    }, [router, userId]);
 
-    // ─── Fetch data on date change ───────────────────────────
+    // ─── Read data on date change (local database) ───────────
 
     useEffect(() => {
-        if (isCheckingOnboarding) return;
+        if (isCheckingOnboarding || !userId) return;
 
         let cancelled = false;
-        fetchDayData(selectedDate).then((result) => {
+        loadDayData(getLocalRepositories(), userId, selectedDate, getTodayStr()).then((result) => {
             if (cancelled) return;
             setDayData(result);
             setIsLoading(false);
@@ -88,7 +110,7 @@ export default function DashboardClient() {
         return () => {
             cancelled = true;
         };
-    }, [selectedDate, isCheckingOnboarding]);
+    }, [selectedDate, isCheckingOnboarding, userId]);
 
     // ─── Week navigation ────────────────────────────────────
 
