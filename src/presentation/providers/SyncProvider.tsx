@@ -9,6 +9,7 @@
 import { useEffect } from "react";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
 import { getSyncEngine, resolveLocalUserId } from "@/infrastructure/sync/syncRuntime";
+import { startSessionPersistence } from "@/presentation/stores/sessionPersistence";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 
 export default function SyncProvider({ children }: { children: React.ReactNode }) {
@@ -38,11 +39,14 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
         );
 
         engine.start({ window, document });
+        // Mirror the active workout into IndexedDB so a killed app loses nothing.
+        const stopPersistence = startSessionPersistence();
 
         return () => {
             active = false;
             unsubscribe();
             authListener.subscription.unsubscribe();
+            stopPersistence();
             engine.stop();
         };
     }, []);
