@@ -102,6 +102,16 @@ CREATE POLICY "Users can delete own logs"
   ON workout_logs FOR DELETE
   USING (auth.uid() = user_id);
 
+-- --- Table privileges ----------------------------------------
+-- Explicit grants, so the schema works even when the project does not
+-- expose new tables to the API roles automatically. RLS still filters rows.
+-- `anon` only needs SELECT on routine_templates for the keep-alive ping
+-- (it returns no rows).
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON routine_templates TO authenticated;
+GRANT SELECT, INSERT, DELETE ON workout_logs TO authenticated;
+GRANT SELECT ON routine_templates TO anon;
+
 -- ===========================================================
 -- JSONB structure reference
 -- ===========================================================
