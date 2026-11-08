@@ -11,6 +11,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
 import { resetUserAppData } from "@/app/actions/debugActions";
+import { signOutAndClear } from "@/infrastructure/sync/syncRuntime";
 import { getUserDisplay } from "@/core/domain/user-display";
 import { LogOut, RotateCcw } from "lucide-react";
 
@@ -64,8 +65,8 @@ export default function UserProfile() {
     // ─── Logout ──────────────────────────────────────────────
 
     const handleLogout = useCallback(async () => {
-        const supabase = createSupabaseBrowserClient();
-        await supabase.auth.signOut();
+        // Flushes pending writes, signs out, wipes local data only if synced.
+        await signOutAndClear();
         router.push("/login");
     }, [router]);
 

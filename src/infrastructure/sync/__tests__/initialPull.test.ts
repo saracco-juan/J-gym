@@ -16,7 +16,9 @@ class FakeTransport implements SyncTransport {
     logs: unknown[] = [];
     since: string | null = null;
     fetched = 0;
-    async execute(_command: SyncCommand): Promise<void> {}
+    async execute(command: SyncCommand): Promise<void> {
+        void command;
+    }
     async fetchRoutines(): Promise<unknown[]> {
         this.fetched++;
         return this.routines;
@@ -25,8 +27,9 @@ class FakeTransport implements SyncTransport {
         this.fetched++;
         return this.custom;
     }
-    async fetchLogsSince(_u: string, since: string): Promise<unknown[]> {
+    async fetchLogsSince(userId: string, since: string): Promise<unknown[]> {
         this.fetched++;
+        void userId;
         this.since = since;
         return this.logs;
     }
