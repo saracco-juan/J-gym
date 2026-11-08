@@ -15,6 +15,8 @@ interface SetRowProps {
     setIndex: number;
     targetReps: number;
     targetWeight: number;
+    /** Already logged values (restored session): shown filled and confirmed. */
+    initialLogged?: { reps: number; weight: number } | null;
     onLog: (exerciseId: string, setIndex: number, reps: number, weight: number) => void;
 }
 
@@ -23,11 +25,12 @@ export default function SetRow({
     setIndex,
     targetReps,
     targetWeight,
+    initialLogged,
     onLog,
 }: SetRowProps) {
-    const [reps, setReps] = useState<string>("");
-    const [weight, setWeight] = useState<string>("");
-    const [isLogged, setIsLogged] = useState(false);
+    const [reps, setReps] = useState<string>(initialLogged ? String(initialLogged.reps) : "");
+    const [weight, setWeight] = useState<string>(initialLogged ? String(initialLogged.weight) : "");
+    const [isLogged, setIsLogged] = useState(initialLogged != null);
 
     const handleConfirm = useCallback(() => {
         const parsedReps = parseInt(reps, 10);

@@ -1,1 +1,10 @@
 export * from "./outbox";
+export { classifySyncError } from "./classify-error";
+export type { SyncErrorInfo, SyncErrorKind } from "./classify-error";
+export { detachTemplate, toSyncCommand } from "./commands";
+export type { SyncCommand, SyncTable } from "./commands";
+export { planFlush } from "./flush-plan";
+export type { FlushPlan, FlushPlanInput } from "./flush-plan";
+export { PULL_WINDOW_DAYS, decideInitialPull, planRoutineRekeys, pullWindowStart } from "./adoption";
+export type { InitialPullDecision, RoutineRekey } from "./adoption";
+export { canClearLocalData, resolveUserId } from "./local-user";

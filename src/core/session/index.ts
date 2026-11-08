@@ -12,3 +12,5 @@ export { reduceSession, sessionReducer } from "./session-reducer";
 export type { SessionAction, SessionReduction, SessionRejection } from "./session-reducer";
 export { evaluateSession } from "./evaluate-session";
 export type { SessionEvaluation } from "./evaluate-session";
+export { finalizeSession, pendingWeightKeys } from "./finalize-session";
+export type { FinalizeInput, FinalizeResult } from "./finalize-session";

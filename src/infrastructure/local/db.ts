@@ -17,10 +17,23 @@ export interface StoredCustomExercise extends CustomExercise {
     userId: string;
 }
 
+/** What the session is about, needed to finish it after a restart. */
+export interface ActiveSessionMeta {
+    templateId: string;
+    dayName: string;
+    /** Local calendar date (YYYY-MM-DD) the workout started on. */
+    date: string;
+    startedAt: number;
+    /** Fixed at start so finishing twice upserts the same log. */
+    logId: string;
+}
+
 /** In-progress workout. One per user: `key` is the userId. */
 export interface ActiveSessionRecord {
     key: string;
     state: SessionState;
+    /** Absent only on records written before the UI used it. */
+    meta?: ActiveSessionMeta;
     updatedAt: number;
 }
 
