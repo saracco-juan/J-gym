@@ -116,3 +116,21 @@ describe("hasUserData / clearAll / count", () => {
         expect(await repos.activeSession.get("u1")).toBeUndefined();
     });
 });
+
+describe("commitWorkout", () => {
+    it("saves the log and routine, queues both and clears the active session atomically", async () => {
+        await repos.activeSession.put("u1", { exercises: [] });
+        await repos.workoutLogs.commitWorkout("u1", log, routine);
+        expect(await repos.workoutLogs.get("l1")).toBeDefined();
+        expect(await repos.routines.get("local-1")).toBeDefined();
+        expect(await repos.activeSession.get("u1")).toBeUndefined();
+        const entries = await repos.outbox.list();
+        expect(entries.map((e) => e.entity).sort()).toEqual(["routine", "workoutLog"]);
+        expect(writes).toBe(1);
+    });
+
+    it("works without a routine update", async () => {
+        await repos.workoutLogs.commitWorkout("u1", log, null);
+        expect((await repos.outbox.list()).map((e) => e.entity)).toEqual(["workoutLog"]);
+    });
+});

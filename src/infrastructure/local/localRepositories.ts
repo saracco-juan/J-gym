@@ -140,6 +140,32 @@ export function createLocalRepositories(
             });
             notify();
         },
+        /**
+         * Finishing a workout in ONE transaction: the log, the updated routine
+         * (when the overload changed it), their outbox entries and the removal
+         * of the active session. A crash leaves either the unfinished session
+         * or the finished workout, never a half state.
+         */
+        async commitWorkout(
+            userId: string,
+            log: IWorkoutLog,
+            routine: IRoutineTemplate | null
+        ): Promise<void> {
+            await db.transaction(
+                "rw",
+                [db.workoutLogs, db.routines, db.activeSession, db.outbox],
+                async () => {
+                    await db.workoutLogs.put(log);
+                    await enqueueWrite("workoutLog", log.id, "upsert", log);
+                    if (routine) {
+                        await db.routines.put(routine);
+                        await enqueueWrite("routine", routine.id, "upsert", routine);
+                    }
+                    await db.activeSession.delete(userId);
+                }
+            );
+            notify();
+        },
         async remove(id: string): Promise<void> {
             await db.transaction("rw", [db.workoutLogs, db.outbox], async () => {
                 await db.workoutLogs.delete(id);
