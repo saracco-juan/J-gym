@@ -43,6 +43,23 @@ function plannedTargets(exercise: SessionExercise): ISetPlan[] {
         }));
 }
 
+/** The strategy compares reps only, so lighter-than-planned sets are checked here. */
+function loggedBelowTargetWeight(exercise: SessionExercise): boolean {
+    return exercise.sets.some(
+        (s) => s.planned && s.logged !== null && s.logged.weight < s.targetWeight
+    );
+}
+
+function maintainScheme(plannedSets: ISetPlan[]): IOverloadSuggestion {
+    const reps = plannedSets[0].targetReps;
+    const weight = plannedSets[0].targetWeight;
+    return {
+        type: "maintain",
+        nextSets: plannedSets.map((s) => ({ ...s })),
+        message: `Se usó menos peso del planeado. Mantener ${plannedSets.length}x${reps} con ${weight}kg.`,
+    };
+}
+
 /**
  * Turns a finished session into the log payload and overload suggestions.
  *
@@ -81,11 +98,13 @@ export function evaluateSession(
             (status === "completed" || status === "failed") &&
             plannedSets.length > 0;
         if (feedsEngine) {
-            suggestions[exercise.key] = evaluateOverload(
-                strategy,
-                { sets: plannedSets },
-                { sets: contiguousResults(exercise) }
-            );
+            suggestions[exercise.key] = loggedBelowTargetWeight(exercise)
+                ? maintainScheme(plannedSets)
+                : evaluateOverload(
+                      strategy,
+                      { sets: plannedSets },
+                      { sets: contiguousResults(exercise) }
+                  );
         }
     }
 

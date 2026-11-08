@@ -244,3 +244,39 @@ describe("evaluateSession overload feeding", () => {
         expect(spy.calls[0].actual.sets).toEqual([]);
     });
 });
+
+describe("evaluateSession weight below target", () => {
+    const start = createSession([plan("row", "Remo", "seated-cable-row", 12, 40)]);
+    const lighter = (): SessionState =>
+        run(
+            start,
+            { type: "logSet", exerciseKey: "row", setNumber: 1, reps: 12, weight: 40 },
+            { type: "logSet", exerciseKey: "row", setNumber: 2, reps: 12, weight: 35 },
+            { type: "logSet", exerciseKey: "row", setNumber: 3, reps: 12, weight: 40 }
+        );
+
+    it("forces a maintain suggestion with the current scheme and skips the strategy", () => {
+        const spy = new SpyStrategy();
+        const { suggestions, exercises } = evaluateSession(lighter(), spy);
+        expect(exercises[0].status).toBe("failed");
+        expect(spy.calls).toHaveLength(0);
+        expect(suggestions.row.type).toBe("maintain");
+        expect(suggestions.row.nextSets).toEqual([
+            { setNumber: 1, targetReps: 12, targetWeight: 40 },
+            { setNumber: 2, targetReps: 12, targetWeight: 40 },
+            { setNumber: 3, targetReps: 12, targetWeight: 40 },
+        ]);
+    });
+
+    it("never yields progress with the real strategy when reps were met at a lower weight", () => {
+        const { suggestions } = evaluateSession(lighter(), new StandardHypertrophyStrategy());
+        expect(suggestions.row.type).toBe("maintain");
+    });
+
+    it("still delegates to the strategy when weight meets or exceeds the target", () => {
+        const spy = new SpyStrategy();
+        const state = run(start, { type: "completeAllAsPlanned", exerciseKey: "row" });
+        evaluateSession(state, spy);
+        expect(spy.calls).toHaveLength(1);
+    });
+});
