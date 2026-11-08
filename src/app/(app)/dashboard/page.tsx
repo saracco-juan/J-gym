@@ -7,6 +7,7 @@
 
 import DashboardClient from "@/presentation/components/dashboard/DashboardClient";
 import UserProfile from "@/presentation/components/dashboard/UserProfile";
+import SyncBadge from "@/presentation/components/sync/SyncBadge";
 
 export default function DashboardPage() {
     return (
@@ -20,7 +21,10 @@ export default function DashboardPage() {
                             Sobrecarga Progresiva
                         </p>
                     </div>
-                    <UserProfile />
+                    <div className="flex items-center gap-3">
+                        <SyncBadge />
+                        <UserProfile />
+                    </div>
                 </div>
             </div>
 
