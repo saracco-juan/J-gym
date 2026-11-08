@@ -2,7 +2,7 @@
  * Dashboard Page — Server Component entry point.
  *
  * Sticky header with UserProfile + DashboardClient.
- * Authentication handled by middleware and server actions.
+ * Authentication is handled by the proxy; data comes from the local database.
  */
 
 import DashboardClient from "@/presentation/components/dashboard/DashboardClient";
