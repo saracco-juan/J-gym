@@ -5,7 +5,7 @@ export default function OfflineRetry() {
         <button
             type="button"
             onClick={() => window.location.reload()}
-            className="btn-primary"
+            className="btn-primary button-md"
         >
             Reintentar
         </button>

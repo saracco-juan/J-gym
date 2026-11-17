@@ -91,7 +91,7 @@ export default function LoginView() {
                         <button
                             type="button"
                             onClick={() => { setState("idle"); setEmail(""); }}
-                            className="btn mt-2 w-full text-accent-text hover:enabled:bg-surface-strong"
+                            className="btn mt-2 w-full text-accent-text hover:enabled:bg-surface-strong button-md"
                         >
                             Usar otro email
                         </button>
@@ -127,7 +127,7 @@ export default function LoginView() {
                             onClick={handleMagicLink}
                             disabled={isBusy || !email.trim()}
                             aria-busy={state === "sending-link"}
-                            className="btn-primary mt-4 w-full"
+                            className="btn-primary mt-4 w-full button-md"
                         >
                             {state === "sending-link" ? "Enviando…" : "Enviar magic link"}
                         </button>
@@ -138,7 +138,7 @@ export default function LoginView() {
                             onClick={handleDemo}
                             disabled={isBusy}
                             aria-busy={state === "starting-demo"}
-                            className="btn-secondary mt-3 w-full"
+                            className="btn-secondary mt-3 w-full button-md"
                         >
                             {state === "starting-demo" ? "Iniciando demo…" : "Probar demo sin registrarte"}
                         </button>

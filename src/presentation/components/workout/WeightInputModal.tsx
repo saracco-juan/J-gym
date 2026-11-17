@@ -58,35 +58,40 @@ export default function WeightInputModal() {
     });
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
             {/* Overlay */}
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-surface-base/80 backdrop-blur-sm" />
 
             {/* Bottom sheet / modal */}
-            <div className="relative w-full max-w-md mx-4 mb-4 sm:mb-0 rounded-2xl bg-zinc-900 border border-zinc-700 shadow-2xl overflow-hidden">
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="weight-modal-title"
+                className="relative mx-4 mb-4 w-full max-w-md overflow-hidden rounded-2xl border border-surface-border bg-surface-raised sm:mb-0"
+            >
                 {/* Header */}
-                <div className="px-5 pt-5 pb-3">
-                    <div className="w-10 h-1 bg-zinc-600 rounded-full mx-auto mb-4 sm:hidden" />
-                    <h2 className="text-lg font-bold text-white">
-                        <TrendUp size={20} className="inline mr-1.5 text-amber-400" /> ¡Subí el peso!
+                <div className="px-4 pb-3 pt-4">
+                    <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-surface-border sm:hidden" />
+                    <h2 id="weight-modal-title" className="heading-6 flex items-center gap-2 text-text-primary">
+                        <TrendUp size={24} weight="bold" className="text-accent-text" /> Subí el peso
                     </h2>
-                    <p className="text-sm text-zinc-400 mt-1">
+                    <p className="body-6 mt-1 text-text-secondary">
                         Superaste el esquema en estos ejercicios. Ingresá el nuevo peso
                         para la próxima sesión.
                     </p>
                 </div>
 
                 {/* Ejercicios pendientes */}
-                <div className="flex flex-col gap-4 px-5 pb-5">
+                <div className="flex flex-col gap-4 px-4 pb-4">
                     {pendingExercises.map(({ id, name }) => (
                         <div key={id} className="flex flex-col gap-2">
                             <label
                                 htmlFor={`weight-${id}`}
-                                className="text-sm font-semibold text-zinc-300"
+                                className="body-5 text-text-secondary"
                             >
                                 {name}
                             </label>
-                            <div className="flex gap-2">
+                            <div className="flex items-center gap-2">
                                 <input
                                     id={`weight-${id}`}
                                     type="number"
@@ -94,16 +99,17 @@ export default function WeightInputModal() {
                                     placeholder=""
                                     value={weightInputs[id] ?? ""}
                                     onChange={(e) => handleChange(id, e.target.value)}
-                                    className="h-14 flex-1 rounded-xl bg-zinc-800 border border-zinc-600 px-4 text-lg font-semibold text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    className="field no-spin min-w-0 flex-1"
                                     aria-label={`Nuevo peso para ${name} en kilogramos`}
                                 />
-                                <span className="flex items-center text-sm font-medium text-zinc-500">
+                                <span className="body-5 text-text-muted">
                                     kg
                                 </span>
                                 <button
+                                    type="button"
                                     onClick={() => handleConfirm(id)}
                                     disabled={!weightInputs[id]}
-                                    className="h-14 px-5 rounded-xl bg-amber-600 hover:bg-amber-500 active:scale-95 font-bold text-white text-sm transition-all disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed"
+                                    className="btn-primary button-sm"
                                     aria-label={`Confirmar peso para ${name}`}
                                 >
                                     Confirmar

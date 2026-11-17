@@ -16,8 +16,8 @@ interface TipsSheetProps {
 export default function TipsSheet({ exerciseName, tips, onClose }: TipsSheetProps) {
     return (
         <BottomSheet title="Técnica" onClose={onClose}>
-            <p className="text-sm font-semibold text-emerald-400">{exerciseName}</p>
-            <ul className="mt-3 flex list-disc flex-col gap-3 pl-5 text-sm text-zinc-300">
+            <p className="body-4 text-accent-text">{exerciseName}</p>
+            <ul className="body-6 mt-3 flex list-disc flex-col gap-3 pl-6 text-text-secondary">
                 {tips.map((tip) => (
                     <li key={tip}>{tip}</li>
                 ))}

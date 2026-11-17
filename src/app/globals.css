@@ -199,10 +199,11 @@
 }
 
 /* ─── Buttons ──────────────────────────────────────────────────────
- * Main buttons: 8px vertical, 12px horizontal padding, 48px touch target. */
+ * Main buttons: 8px vertical, 12px horizontal padding, 48px touch target.
+ * The text style (button-md, button-sm) is applied on the element itself. */
 
 @utility btn {
-  @apply pressable button-md inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 py-2 text-center;
+  @apply pressable inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 py-2 text-center;
 }
 
 @utility btn-primary {
@@ -225,6 +226,22 @@
 
 @utility field {
   @apply interactive body-3 h-12 w-full rounded-xl border border-surface-border bg-surface-overlay px-3 text-text-primary placeholder:text-text-muted hover:enabled:border-text-muted focus-visible:border-accent-hover disabled:opacity-50;
+}
+
+/* Search field with a leading icon. */
+@utility field-with-icon {
+  @apply field;
+  padding-left: calc(var(--spacing) * 12);
+}
+
+/* Number inputs without the native spinner arrows. */
+@utility no-spin {
+  appearance: textfield;
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
 }
 
 /* ─── Loading ──────────────────────────────────────────────────────── */

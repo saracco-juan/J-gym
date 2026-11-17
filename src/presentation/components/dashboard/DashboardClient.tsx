@@ -217,7 +217,7 @@ export default function DashboardClient() {
                                 type="button"
                                 onClick={() => handleStartWorkout(dayData.data)}
                                 disabled={dayData.action === "future"}
-                                className="btn-primary w-full"
+                                className="btn-primary w-full button-md"
                             >
                                 {dayData.action === "resume"
                                     ? "Continuar rutina"
@@ -232,7 +232,7 @@ export default function DashboardClient() {
                         <RoutineSummary mode="log" log={dayData.data} />
                         {isToday && (
                             // Today's workout is finished: the day is locked.
-                            <button type="button" disabled className="btn-primary w-full">
+                            <button type="button" disabled className="btn-primary w-full button-md">
                                 Entrenamiento completado
                             </button>
                         )}
