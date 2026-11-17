@@ -16,7 +16,7 @@ declare const self: ServiceWorkerGlobalScope;
 const NETWORK_TIMEOUT_SECONDS = 3;
 
 /** Routes of the authenticated area that must open without a connection. */
-const APP_SHELL_PREFIXES = ["/dashboard", "/workout", "/onboarding"];
+const APP_SHELL_PREFIXES = ["/dashboard", "/workout", "/onboarding", "/history"];
 
 const isAppShellPath = (pathname: string) =>
     APP_SHELL_PREFIXES.some(

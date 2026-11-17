@@ -10,7 +10,8 @@
  */
 
 import { useState } from "react";
-import { Info, Plus, Trophy } from "@phosphor-icons/react";
+import Link from "next/link";
+import { ChartLineUp, Info, Plus, Trophy } from "@phosphor-icons/react";
 import {
     exerciseCardStatus,
     formatExerciseScheme,
@@ -23,6 +24,7 @@ import {
     formatStagnationSuggestion,
     suggestStagnationAction,
 } from "@/core/progress";
+import { historyHref } from "@/presentation/components/history/historyHref";
 import StagnationNotice from "@/presentation/components/ui/StagnationNotice";
 import ExerciseStatusBadge from "./ExerciseStatusBadge";
 import SetEditor from "./SetEditor";
@@ -159,16 +161,25 @@ export default function ExerciseCard({
                         </div>
                     )}
                 </div>
-                {onShowTips && (
-                    <button
-                        type="button"
-                        onClick={onShowTips}
-                        className="btn-icon -my-2 -mr-2"
-                        aria-label={`Ver técnica de ${exercise.name}`}
+                <div className="-my-2 -mr-2 flex shrink-0">
+                    <Link
+                        href={historyHref(exercise.ref.id)}
+                        className="btn-icon hover:bg-surface-strong hover:text-text-primary active:scale-98"
+                        aria-label={`Ver historial de ${exercise.name}`}
                     >
-                        <Info size={24} weight="bold" />
-                    </button>
-                )}
+                        <ChartLineUp size={24} weight="bold" />
+                    </Link>
+                    {onShowTips && (
+                        <button
+                            type="button"
+                            onClick={onShowTips}
+                            className="btn-icon"
+                            aria-label={`Ver técnica de ${exercise.name}`}
+                        >
+                            <Info size={24} weight="bold" />
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="flex flex-col gap-2 p-4">

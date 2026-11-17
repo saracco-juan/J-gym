@@ -17,6 +17,7 @@ import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import ExerciseCard from "./ExerciseCard";
 import ExercisePicker from "./ExercisePicker";
 import FinishConfirmDialog from "./FinishConfirmDialog";
+import { historyHref } from "@/presentation/components/history/historyHref";
 import TipsSheet from "./TipsSheet";
 import WeightInputModal from "./WeightInputModal";
 import WorkoutSkeleton from "./WorkoutSkeleton";
@@ -258,6 +259,7 @@ export default function ActiveWorkoutView() {
                 <TipsSheet
                     exerciseName={tipsExercise.name}
                     tips={tips}
+                    historyHref={historyHref(tipsExercise.ref.id)}
                     onClose={() => setTipsKey(null)}
                 />
             )}
