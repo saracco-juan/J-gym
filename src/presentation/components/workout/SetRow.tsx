@@ -1,106 +1,87 @@
 "use client";
 
 /**
- * SetRow — Fila individual para una serie de un ejercicio.
+ * SetRow — one set of an exercise.
  *
- * Inputs numéricos para "Reps logradas" y "Peso utilizado".
- * Mobile-first: inputMode="decimal" para teclado numérico,
- * áreas de toque grandes (h-12).
+ * Presentational. Shows the planned values (or the logged ones once done).
+ * The big check button logs the set exactly as planned in one tap (or undoes
+ * it when already logged); tapping the values opens the inline editor.
  */
 
-import { useState, useCallback } from "react";
+import { Check } from "lucide-react";
+import { formatSetValue } from "@/core/session";
 
 interface SetRowProps {
-    exerciseId: string;
-    setIndex: number;
+    setNumber: number;
     targetReps: number;
     targetWeight: number;
-    /** Already logged values (restored session): shown filled and confirmed. */
-    initialLogged?: { reps: number; weight: number } | null;
-    onLog: (exerciseId: string, setIndex: number, reps: number, weight: number) => void;
+    isBodyweight: boolean;
+    logged: { reps: number; weight: number } | null;
+    onToggle: () => void;
+    onEdit: () => void;
 }
 
 export default function SetRow({
-    exerciseId,
-    setIndex,
+    setNumber,
     targetReps,
     targetWeight,
-    initialLogged,
-    onLog,
+    isBodyweight,
+    logged,
+    onToggle,
+    onEdit,
 }: SetRowProps) {
-    const [reps, setReps] = useState<string>(initialLogged ? String(initialLogged.reps) : "");
-    const [weight, setWeight] = useState<string>(initialLogged ? String(initialLogged.weight) : "");
-    const [isLogged, setIsLogged] = useState(initialLogged != null);
-
-    const handleConfirm = useCallback(() => {
-        const parsedReps = parseInt(reps, 10);
-        const parsedWeight = parseFloat(weight);
-
-        if (isNaN(parsedReps) || isNaN(parsedWeight)) return;
-        if (parsedReps <= 0 || parsedWeight < 0) return;
-
-        onLog(exerciseId, setIndex, parsedReps, parsedWeight);
-        setIsLogged(true);
-    }, [reps, weight, exerciseId, setIndex, onLog]);
+    const hasTarget = targetReps > 0 && (isBodyweight || targetWeight > 0);
+    const targetText = hasTarget ? formatSetValue(targetReps, targetWeight, isBodyweight) : null;
+    const loggedText = logged ? formatSetValue(logged.reps, logged.weight, isBodyweight) : null;
+    const differs = logged !== null && targetText !== null && loggedText !== targetText;
 
     return (
         <div
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${isLogged
-                    ? "bg-emerald-900/30 border border-emerald-700/50"
-                    : "bg-white/5 border border-white/10"
-                }`}
+            className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 transition-colors ${
+                logged
+                    ? "border-emerald-700/50 bg-emerald-900/30"
+                    : "border-white/10 bg-white/5"
+            }`}
         >
-            {/* Número de serie */}
-            <span className="text-xs font-bold text-zinc-500 w-6 shrink-0">
-                S{setIndex + 1}
-            </span>
+            <span className="w-6 shrink-0 text-xs font-bold text-zinc-500">S{setNumber}</span>
 
-            {/* Objetivo (referencia visual) */}
-            <span className="text-xs text-zinc-500 w-16 shrink-0 text-center">
-                {targetReps}r × {targetWeight}kg
-            </span>
-
-            {/* Input: Reps */}
-            <input
-                type="number"
-                inputMode="numeric"
-                placeholder="Reps"
-                value={reps}
-                onChange={(e) => {
-                    setReps(e.target.value);
-                    if (isLogged) setIsLogged(false);
-                }}
-                disabled={isLogged}
-                className="h-12 w-16 rounded-lg bg-zinc-800 border border-zinc-700 text-center text-sm font-semibold text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                aria-label={`Repeticiones serie ${setIndex + 1}`}
-            />
-
-            {/* Input: Peso */}
-            <input
-                type="number"
-                inputMode="decimal"
-                placeholder="Kg"
-                value={weight}
-                onChange={(e) => {
-                    setWeight(e.target.value);
-                    if (isLogged) setIsLogged(false);
-                }}
-                disabled={isLogged}
-                className="h-12 w-16 rounded-lg bg-zinc-800 border border-zinc-700 text-center text-sm font-semibold text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                aria-label={`Peso serie ${setIndex + 1}`}
-            />
-
-            {/* Botón confirmar */}
             <button
-                onClick={handleConfirm}
-                disabled={isLogged || !reps || !weight}
-                className={`h-12 w-12 shrink-0 rounded-lg font-bold text-sm transition-all ${isLogged
-                        ? "bg-emerald-700 text-emerald-200 cursor-not-allowed"
-                        : "bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed"
-                    }`}
-                aria-label={isLogged ? `Serie ${setIndex + 1} completada` : `Confirmar serie ${setIndex + 1}`}
+                type="button"
+                onClick={onEdit}
+                className="flex min-h-12 min-w-0 flex-1 flex-col items-start justify-center text-left"
+                aria-label={`Editar serie ${setNumber}`}
             >
-                {isLogged ? "✓" : "OK"}
+                <span
+                    className={`text-base font-semibold ${
+                        logged ? "text-emerald-200" : hasTarget ? "text-white" : "text-zinc-400"
+                    }`}
+                >
+                    {loggedText ?? targetText ?? "Sin objetivo"}
+                </span>
+                {differs && targetText && (
+                    <span className="text-xs text-zinc-500">Objetivo {targetText}</span>
+                )}
+                {!logged && !hasTarget && (
+                    <span className="text-xs text-zinc-500">Tocá para ingresar</span>
+                )}
+            </button>
+
+            <button
+                type="button"
+                onClick={onToggle}
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-all active:scale-95 ${
+                    logged
+                        ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                        : "border border-zinc-600 bg-zinc-800 text-zinc-300 hover:border-emerald-500 hover:text-emerald-400"
+                }`}
+                aria-label={
+                    logged
+                        ? `Deshacer serie ${setNumber}`
+                        : `Completar serie ${setNumber} como planificada`
+                }
+                aria-pressed={logged !== null}
+            >
+                <Check size={22} strokeWidth={3} />
             </button>
         </div>
     );
