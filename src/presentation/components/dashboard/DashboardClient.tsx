@@ -15,7 +15,7 @@ import WeekCalendar from "./WeekCalendar";
 import RoutineSummary from "./RoutineSummary";
 import DashboardSkeleton, { ExerciseListSkeleton } from "./DashboardSkeleton";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
-import { hasRoutines, isDayLocked, loadDayData } from "@/infrastructure/local/queries";
+import { hasRoutines, isDayLocked, loadDayData, loadStagnantExercises } from "@/infrastructure/local/queries";
 import type { DayDataResult } from "@/infrastructure/local/queries";
 import { waitForFirstPull } from "@/infrastructure/sync/syncRuntime";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
@@ -64,6 +64,7 @@ export default function DashboardClient() {
     const [selectedDate, setSelectedDate] = useState(getTodayStr);
     const [dayData, setDayData] = useState<DayDataResult | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [stagnant, setStagnant] = useState<ReadonlySet<string>>(new Set());
     const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
     // ─── Onboarding check ────────────────────────────────────
@@ -113,6 +114,21 @@ export default function DashboardClient() {
             cancelled = true;
         };
     }, [selectedDate, isCheckingOnboarding, userId]);
+
+    // ─── Stagnant exercises (local logs) ─────────────────────
+
+    useEffect(() => {
+        if (isCheckingOnboarding || !userId) return;
+        let cancelled = false;
+        loadStagnantExercises(getLocalRepositories(), userId)
+            .then((keys) => {
+                if (!cancelled) setStagnant(keys);
+            })
+            .catch(() => { });
+        return () => {
+            cancelled = true;
+        };
+    }, [isCheckingOnboarding, userId]);
 
     // ─── Week navigation ────────────────────────────────────
 
@@ -211,7 +227,7 @@ export default function DashboardClient() {
                     </div>
                 ) : dayData.type === "template" ? (
                     <div className="flex flex-col gap-4">
-                        <RoutineSummary mode="template" template={dayData.data} />
+                        <RoutineSummary mode="template" template={dayData.data} stagnant={stagnant} />
                         {!isPast && (
                             <button
                                 type="button"
@@ -229,7 +245,7 @@ export default function DashboardClient() {
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4">
-                        <RoutineSummary mode="log" log={dayData.data} />
+                        <RoutineSummary mode="log" log={dayData.data} stagnant={stagnant} />
                         {isToday && (
                             // Today's workout is finished: the day is locked.
                             <button type="button" disabled className="btn-primary w-full button-md">
