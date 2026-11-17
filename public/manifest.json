@@ -4,8 +4,8 @@
     "description": "PWA mobile-first para trackear entrenamientos en el gimnasio con gestión de sobrecarga progresiva.",
     "start_url": "/dashboard",
     "display": "standalone",
-    "background_color": "#09090b",
-    "theme_color": "#059669",
+    "background_color": "#000000",
+    "theme_color": "#000000",
     "orientation": "portrait",
     "icons": [
         {
