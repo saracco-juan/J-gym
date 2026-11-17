@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * UserProfile — Avatar + dropdown con perfil, rutina, logout y reset.
+ * UserProfile — Avatar + dropdown con perfil, rutina, logout y acciones de cuenta.
  *
  * El avatar muestra las iniciales del perfil sobre el color elegido; sin
  * perfil, la inicial del nombre o del email. Las cuentas anónimas ven la
@@ -11,9 +11,6 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
-import { resetUserData } from "@/infrastructure/local/queries";
-import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import { useAuthStore } from "@/presentation/stores/useAuthStore";
 import { isNameRejected, useProfileStore } from "@/presentation/stores/useProfileStore";
 import { getUserDisplay } from "@/core/domain/user-display";
@@ -21,11 +18,11 @@ import { shouldOfferEmailLink } from "@/core/auth";
 import { DEFAULT_AVATAR_COLOR } from "@/core/profile";
 import Avatar from "@/presentation/components/ui/Avatar";
 import LinkEmailSheet from "@/presentation/components/auth/LinkEmailSheet";
+import { AccountMenuItems, AccountSheets, useAccountActions } from "@/presentation/components/account/AccountActions";
 import SignOutSheet from "./SignOutSheet";
 import { useSignOut } from "./useSignOut";
 import {
     SignOut,
-    ArrowCounterClockwise,
     PencilSimple,
     UserCircle,
     Envelope,
@@ -42,8 +39,6 @@ export default function UserProfile() {
     const nameRejected = useProfileStore(isNameRejected);
     const [open, setOpen] = useState(false);
     const [linking, setLinking] = useState(false);
-    const [isResetting, setIsResetting] = useState(false);
-    const [resetError, setResetError] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
     // ─── Close on outside click ──────────────────────────────
@@ -68,30 +63,7 @@ export default function UserProfile() {
         if (signOut.request()) setOpen(false);
     }, [signOut]);
 
-    // ─── Reset ───────────────────────────────────────────────
-
-    const handleReset = useCallback(async () => {
-        const confirmed = window.confirm(
-            "Esto borrará todas tus rutinas y registros. ¿Querés continuar?"
-        );
-        if (!confirmed) return;
-
-        const userId = useSyncStore.getState().userId;
-        if (!userId) return;
-
-        setIsResetting(true);
-        setResetError(null);
-        try {
-            // Local reset; the deletes reach the server through the outbox.
-            await resetUserData(getLocalRepositories(), userId);
-            setOpen(false);
-            router.push("/onboarding");
-        } catch {
-            setResetError("No se pudo reiniciar la app. Intentá de nuevo.");
-        } finally {
-            setIsResetting(false);
-        }
-    }, [router]);
+    const account = useAccountActions();
 
     // ─── Render ──────────────────────────────────────────────
 
@@ -196,27 +168,12 @@ export default function UserProfile() {
                         {signOut.signingOut ? "Cerrando sesión…" : "Cerrar sesión"}
                     </button>
 
-                    {/* Reset (development only) */}
-                    {process.env.NODE_ENV !== "production" && (
-                        <button
-                            type="button"
-                            role="menuitem"
-                            onClick={handleReset}
-                            disabled={isResetting}
-                            className="pressable body-5 flex min-h-12 w-full items-center gap-3 rounded-sm px-3 py-2 text-danger-text hover:enabled:bg-surface-strong disabled:opacity-50"
-                        >
-                            <ArrowCounterClockwise size={20} weight="bold" />
-                            {isResetting ? "Reiniciando…" : "Reiniciar app (solo desarrollo)"}
-                        </button>
-                    )}
-
-                    {resetError && (
-                        <p role="alert" className="caption-5 px-3 py-2 text-danger-text">
-                            {resetError}
-                        </p>
-                    )}
+                    {/* Account actions, destructive, at the bottom */}
+                    <AccountMenuItems actions={account} onChosen={() => setOpen(false)} />
                 </div>
             )}
+
+            <AccountSheets actions={account} />
 
             {linking && <LinkEmailSheet onClose={() => setLinking(false)} />}
 

@@ -72,6 +72,7 @@ Requirements: Node 20+ and a Supabase project (the free tier works).
    | `0003_keep_alive.sql` | the heartbeat that the daily `keep-alive` workflow writes so the Free project is not paused |
    | `0004_profiles.sql` | `profiles` (display name and avatar color) with its Row Level Security |
    | `0005_public_stats.sql` | `public_stats` (the snapshot each user publishes for the leaderboard) with its Row Level Security |
+   | `0006_delete_account.sql` | `delete_own_account()`, the function behind "Eliminar cuenta" |
 
 2. Set up the email code login (see **Authentication** below).
 3. Configure and start:
@@ -99,6 +100,13 @@ Login is an email one-time code: the app asks for the email, Supabase sends a co
 **Anonymous accounts.** The old "Probar demo" button created anonymous users. They keep working: a banner on the dashboard and an item in the profile menu let them link an email (`updateUser({ email })` plus the code, verified with `type: "email_change"`). It is the same user id, so every row stays. Profiles require a linked email.
 
 Once every anonymous account that matters has linked an email, turn **Allow anonymous sign-ins** off in **Authentication > Sign In / Providers**. The app has no code path that creates anonymous users anymore.
+
+## Account
+
+Two actions in the profile menu, both behind a confirmation sheet:
+
+- **Reiniciar datos** keeps the account, the name and the color. It deletes the routine, the workouts, the custom exercises and the unfinished session on the device and queues the matching deletes in the outbox, so it works offline. A fresh empty stats snapshot is published so the leaderboard stops showing the old numbers. It is blocked while a workout is in progress. Other devices keep their local copy until they reset too.
+- **Eliminar cuenta** needs a connection and the word `ELIMINAR` typed. It calls the `delete_own_account()` RPC (migration `0006`), which deletes the row in `auth.users`; every user table references it with `ON DELETE CASCADE`, so routines, workouts, custom exercises, profile and stats go with it, and Supabase removes the sessions and refresh tokens. If the call fails nothing is deleted locally. On success the device is wiped (data, outbox, profile, stats cache) and the app returns to `/login`. A JWT already issued stays valid until it expires, but a deleted user has no rows left for it to reach. Deleting a user that owns Storage objects is refused by Supabase; the app stores none.
 
 ## Scripts
 
