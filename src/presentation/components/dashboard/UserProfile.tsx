@@ -1,59 +1,48 @@
 "use client";
 
 /**
- * UserProfile — Avatar + dropdown con logout y reset.
+ * UserProfile — Avatar + dropdown con perfil, rutina, logout y reset.
  *
- * Muestra avatar de Google o inicial del email.
+ * El avatar muestra las iniciales del perfil sobre el color elegido; sin
+ * perfil, la inicial del nombre o del email. Las cuentas anónimas ven la
+ * opción de vincular un email en lugar de editar el perfil.
  * Mobile-first: compact, tap-friendly.
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
 import { resetUserData } from "@/infrastructure/local/queries";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
+import { useAuthStore } from "@/presentation/stores/useAuthStore";
+import { isNameRejected, useProfileStore } from "@/presentation/stores/useProfileStore";
 import { signOutAndClear } from "@/infrastructure/sync/syncRuntime";
 import { getUserDisplay } from "@/core/domain/user-display";
-import { SignOut, ArrowCounterClockwise, PencilSimple } from "@phosphor-icons/react";
+import { shouldOfferEmailLink } from "@/core/auth";
+import { DEFAULT_AVATAR_COLOR } from "@/core/profile";
+import Avatar from "@/presentation/components/ui/Avatar";
+import LinkEmailSheet from "@/presentation/components/auth/LinkEmailSheet";
+import {
+    SignOut,
+    ArrowCounterClockwise,
+    PencilSimple,
+    UserCircle,
+    Envelope,
+} from "@phosphor-icons/react";
 
-interface UserInfo {
-    email: string;
-    name: string;
-    avatarUrl: string | null;
-}
+const MENU_ITEM =
+    "pressable body-5 flex min-h-12 w-full items-center gap-3 rounded-sm px-3 py-2 text-text-primary hover:bg-surface-strong";
 
 export default function UserProfile() {
     const router = useRouter();
-    const [user, setUser] = useState<UserInfo | null>(null);
+    const authUser = useAuthStore((s) => s.user);
+    const profile = useProfileStore((s) => s.profile);
+    const nameRejected = useProfileStore(isNameRejected);
     const [open, setOpen] = useState(false);
+    const [linking, setLinking] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [resetError, setResetError] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
-
-    // ─── Fetch user on mount ─────────────────────────────────
-
-    useEffect(() => {
-        async function load() {
-            const supabase = createSupabaseBrowserClient();
-            // getSession reads local storage, so the avatar renders offline.
-            const { data: { session } } = await supabase.auth.getSession();
-            const authUser = session?.user;
-            if (authUser) {
-                const display = getUserDisplay({
-                    email: authUser.email,
-                    fullName: authUser.user_metadata?.full_name,
-                    isAnonymous: authUser.is_anonymous,
-                });
-                setUser({
-                    email: display.email,
-                    name: display.name,
-                    avatarUrl: authUser.user_metadata?.avatar_url ?? null,
-                });
-            }
-        }
-        load();
-    }, []);
 
     // ─── Close on outside click ──────────────────────────────
 
@@ -102,9 +91,14 @@ export default function UserProfile() {
 
     // ─── Render ──────────────────────────────────────────────
 
-    if (!user) return null;
+    if (!authUser) return null;
 
-    const initial = (user.name || user.email).charAt(0).toUpperCase();
+    const display = getUserDisplay({
+        email: authUser.email,
+        isAnonymous: authUser.isAnonymous,
+    });
+    const name = profile?.displayName ?? display.name;
+    const isAnonymous = shouldOfferEmailLink(authUser);
 
     return (
         <div className="relative" ref={menuRef}>
@@ -117,18 +111,11 @@ export default function UserProfile() {
                 aria-expanded={open}
                 aria-haspopup="menu"
             >
-                {user.avatarUrl ? (
-                    <img
-                        src={user.avatarUrl}
-                        alt={user.name}
-                        className="h-full w-full object-cover"
-                        referrerPolicy="no-referrer"
-                    />
-                ) : (
-                    <div className="body-4 flex h-full w-full items-center justify-center bg-accent text-text-primary">
-                        {initial}
-                    </div>
-                )}
+                <Avatar
+                    name={name}
+                    color={profile?.avatarColor ?? DEFAULT_AVATAR_COLOR}
+                    size="fill"
+                />
             </button>
 
             {/* Dropdown */}
@@ -139,18 +126,47 @@ export default function UserProfile() {
                 >
                     {/* User info */}
                     <div className="px-3 py-2">
-                        <p className="body-4 truncate text-text-primary">{user.name}</p>
-                        {user.email && (
-                            <p className="caption-5 truncate text-text-muted">{user.email}</p>
+                        <p className="body-4 truncate text-text-primary">{name}</p>
+                        {display.email && (
+                            <p className="caption-5 truncate text-text-muted">{display.email}</p>
                         )}
                     </div>
+
+                    {/* Link an email (anonymous) or edit the profile */}
+                    {isAnonymous ? (
+                        <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                                setOpen(false);
+                                setLinking(true);
+                            }}
+                            className={MENU_ITEM}
+                        >
+                            <Envelope size={20} weight="bold" /> Vincular email
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => router.push("/profile")}
+                            className={MENU_ITEM}
+                        >
+                            <UserCircle size={20} weight="bold" /> Editar perfil
+                        </button>
+                    )}
+                    {nameRejected && (
+                        <p role="alert" className="caption-5 px-3 pb-1 text-danger-text">
+                            Ese nombre ya está en uso. Elegí otro en tu perfil.
+                        </p>
+                    )}
 
                     {/* Routine editor */}
                     <button
                         type="button"
                         role="menuitem"
                         onClick={() => router.push("/routine")}
-                        className="pressable body-5 flex min-h-12 w-full items-center gap-3 rounded-sm px-3 py-2 text-text-primary hover:bg-surface-strong"
+                        className={MENU_ITEM}
                     >
                         <PencilSimple size={20} weight="bold" /> Editar rutina
                     </button>
@@ -160,7 +176,7 @@ export default function UserProfile() {
                         type="button"
                         role="menuitem"
                         onClick={handleLogout}
-                        className="pressable body-5 flex min-h-12 w-full items-center gap-3 rounded-sm px-3 py-2 text-text-primary hover:bg-surface-strong"
+                        className={MENU_ITEM}
                     >
                         <SignOut size={20} weight="bold" /> Cerrar sesión
                     </button>
@@ -186,6 +202,8 @@ export default function UserProfile() {
                     )}
                 </div>
             )}
+
+            {linking && <LinkEmailSheet onClose={() => setLinking(false)} />}
         </div>
     );
 }
