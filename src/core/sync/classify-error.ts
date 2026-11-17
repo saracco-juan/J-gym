@@ -8,6 +8,8 @@
  * - retry:           anything else. Back off.
  */
 
+import type { OutboxEntity } from "./outbox";
+
 export type SyncErrorKind = "auth" | "network" | "unique-conflict" | "missing-parent" | "retry";
 
 export interface SyncErrorInfo {
@@ -31,4 +33,15 @@ export function classifySyncError(info: SyncErrorInfo): SyncErrorKind {
     if (status === 0) return "network";
     if (!code && message !== undefined && NETWORK_MESSAGE.test(message)) return "network";
     return "retry";
+}
+
+/**
+ * A failed public stats snapshot is dropped instead of retried, unless the
+ * device is simply offline. The snapshot is derived data that is recomputed
+ * and enqueued again on the next trigger, and its failures (the server has no
+ * profile for the user yet, or the table is missing) must never pause the
+ * queue or burn attempts that belong to the user's own data.
+ */
+export function shouldDropFailedEntry(entity: OutboxEntity, kind: SyncErrorKind): boolean {
+    return entity === "stats" && kind !== "network";
 }

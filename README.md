@@ -16,6 +16,7 @@ The UI is in Spanish.
 
 - **Sign in** with a code sent by email (typed inside the app, so it works in the installed PWA). No password and no link.
 - **Profile:** a display name and an avatar color, shown as initials in the header. Accounts created with the old anonymous demo link an email first and keep all their data.
+- **Gym table** (`/leaderboard`): every registered user with a profile is ranked by streak, weekly volume or progress of the month, with level, status and achievements on a card. Each device computes its own stats from local data and publishes one snapshot; offline it shows the last board it saw. The numbers are self reported and only describe what happened: the app never suggests a weight.
 - **Onboarding:** pick your training days, start from a default routine or build your own.
 - **Weekly calendar** with the routine of the day and a motivational quote on rest days.
 - **Workout session:** log reps and weight per set, then finish to save an immutable log.
@@ -47,6 +48,8 @@ src/
 │   ├── domain/      Entities and pure helpers
 │   ├── strategies/  Overload algorithms (Strategy pattern)
 │   ├── use-cases/   evaluate-overload, detect-personal-records
+│   ├── stats/       Streak, XP and level, status and achievements (the public snapshot)
+│   ├── leaderboard/ Ranking, stale value rules and number formats
 │   └── constants/   Default routines, quotes
 ├── infrastructure/  Adapters: Supabase repositories (Repository pattern) and auth clients
 ├── presentation/    React components and Zustand stores
@@ -54,7 +57,7 @@ src/
 └── proxy.ts         Route protection (Next 16 proxy)
 ```
 
-Every table has Row Level Security: users only read and write their own rows (`auth.uid() = user_id`). The exception is `profiles`: every registered (non anonymous) user can read all profiles, because the leaderboard shows them, but only writes their own. Schema: [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) and the later migrations.
+Every table has Row Level Security: users only read and write their own rows (`auth.uid() = user_id`). The exceptions are `profiles` and `public_stats`: every registered (non anonymous) user can read all of them, because the leaderboard shows them, but only writes their own (and `public_stats` only once a profile exists). Schema: [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) and the later migrations.
 
 ## Run locally
 
@@ -68,6 +71,7 @@ Requirements: Node 20+ and a Supabase project (the free tier works).
    | `0002_offline_sync.sql` | custom exercises and the columns the sync engine needs |
    | `0003_keep_alive.sql` | the heartbeat that the daily `keep-alive` workflow writes so the Free project is not paused |
    | `0004_profiles.sql` | `profiles` (display name and avatar color) with its Row Level Security |
+   | `0005_public_stats.sql` | `public_stats` (the snapshot each user publishes for the leaderboard) with its Row Level Security |
 
 2. Set up the email code login (see **Authentication** below).
 3. Configure and start:

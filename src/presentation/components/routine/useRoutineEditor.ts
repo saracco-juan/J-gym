@@ -31,6 +31,7 @@ import {
     saveRoutineEdits,
     type RoutineEditorData,
 } from "@/infrastructure/local/queries";
+import { requestStatsPublish } from "@/presentation/stats/requestStatsPublish";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 
 export function useRoutineEditor() {
@@ -121,6 +122,8 @@ export function useRoutineEditor() {
             try {
                 const plan = planRoutineSave({ userId, original: stored.templates, draft });
                 await saveRoutineEdits(getLocalRepositories(), plan);
+                // The schedule changed, so the streak may too.
+                void requestStatsPublish();
                 router.push("/dashboard");
             } catch {
                 setSaveError("No se pudo guardar la rutina en el dispositivo. Intenta de nuevo.");

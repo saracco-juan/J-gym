@@ -13,6 +13,8 @@
 import type { CustomExercise } from "@/core/catalog";
 import type { IProfile, IRoutineTemplate, IWorkoutLog } from "@/core/domain";
 import type { SessionState } from "@/core/session";
+import type { StatsPayload } from "@/core/mappers";
+import type { UserStats } from "@/core/stats";
 import {
     coalesceEntry,
     markFailed,
@@ -39,6 +41,15 @@ export interface LocalDeps {
 
 /** `meta` key of the notice about a profile write the server refused. */
 export const profileRejectionKey = (userId: string) => `profileRejected:${userId}`;
+
+/** `meta` key of the last stats snapshot this device published. */
+export const statsSnapshotKey = (userId: string) => `statsSnapshot:${userId}`;
+
+/** The last published snapshot and the local day it was computed for (YYYY-MM-DD). */
+export interface StoredStatsSnapshot {
+    date: string;
+    stats: UserStats;
+}
 
 const writeListeners = new Set<() => void>();
 
@@ -196,6 +207,30 @@ export function createLocalRepositories(
             return (await db.meta.get(profileRejectionKey(userId)))?.value as
                 | ProfileRejection
                 | undefined;
+        },
+    };
+
+    /**
+     * The own public stats snapshot. Derived data, so it lives in `meta` and
+     * only the latest one is queued: the outbox entry is keyed by the user id
+     * and each publish coalesces into it.
+     */
+    const stats = {
+        async get(userId: string): Promise<StoredStatsSnapshot | undefined> {
+            return (await db.meta.get(statsSnapshotKey(userId)))?.value as
+                | StoredStatsSnapshot
+                | undefined;
+        },
+        async publish(userId: string, date: string, snapshot: UserStats): Promise<void> {
+            const payload: StatsPayload = { userId, stats: snapshot };
+            await db.transaction("rw", [db.meta, db.outbox], async () => {
+                await db.meta.put({
+                    key: statsSnapshotKey(userId),
+                    value: { date, stats: snapshot } satisfies StoredStatsSnapshot,
+                });
+                await enqueueWrite("stats", userId, "upsert", payload);
+            });
+            notify();
         },
     };
 
@@ -368,7 +403,7 @@ export function createLocalRepositories(
         },
     };
 
-    return { routines, customExercises, workoutLogs, profiles, activeSession, meta, outbox, sync };
+    return { routines, customExercises, workoutLogs, profiles, stats, activeSession, meta, outbox, sync };
 }
 
 export type LocalRepositories = ReturnType<typeof createLocalRepositories>;

@@ -1,5 +1,5 @@
 export * from "./outbox";
-export { classifySyncError } from "./classify-error";
+export { classifySyncError, shouldDropFailedEntry } from "./classify-error";
 export type { SyncErrorInfo, SyncErrorKind } from "./classify-error";
 export { detachTemplate, toSyncCommand } from "./commands";
 export type { SyncCommand, SyncTable } from "./commands";
