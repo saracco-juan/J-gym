@@ -16,12 +16,13 @@ import { resetUserData } from "@/infrastructure/local/queries";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import { useAuthStore } from "@/presentation/stores/useAuthStore";
 import { isNameRejected, useProfileStore } from "@/presentation/stores/useProfileStore";
-import { signOutAndClear } from "@/infrastructure/sync/syncRuntime";
 import { getUserDisplay } from "@/core/domain/user-display";
 import { shouldOfferEmailLink } from "@/core/auth";
 import { DEFAULT_AVATAR_COLOR } from "@/core/profile";
 import Avatar from "@/presentation/components/ui/Avatar";
 import LinkEmailSheet from "@/presentation/components/auth/LinkEmailSheet";
+import SignOutSheet from "./SignOutSheet";
+import { useSignOut } from "./useSignOut";
 import {
     SignOut,
     ArrowCounterClockwise,
@@ -59,11 +60,13 @@ export default function UserProfile() {
 
     // ─── Logout ──────────────────────────────────────────────
 
-    const handleLogout = useCallback(async () => {
-        // Flushes pending writes, signs out, wipes local data only if synced.
-        await signOutAndClear();
-        router.push("/login");
-    }, [router]);
+    const isAnonymous = shouldOfferEmailLink(authUser);
+    const signOut = useSignOut(isAnonymous);
+
+    const handleLogout = useCallback(() => {
+        // Keep the menu open while signing out so its busy label is visible.
+        if (signOut.request()) setOpen(false);
+    }, [signOut]);
 
     // ─── Reset ───────────────────────────────────────────────
 
@@ -99,8 +102,6 @@ export default function UserProfile() {
         isAnonymous: authUser.isAnonymous,
     });
     const name = profile?.displayName ?? display.name;
-    const isAnonymous = shouldOfferEmailLink(authUser);
-
     return (
         <div className="relative" ref={menuRef}>
             {/* Avatar button */}
@@ -187,9 +188,12 @@ export default function UserProfile() {
                         type="button"
                         role="menuitem"
                         onClick={handleLogout}
-                        className={MENU_ITEM}
+                        disabled={signOut.signingOut}
+                        aria-busy={signOut.signingOut}
+                        className={`${MENU_ITEM} disabled:opacity-50`}
                     >
-                        <SignOut size={20} weight="bold" /> Cerrar sesión
+                        <SignOut size={20} weight="bold" />{" "}
+                        {signOut.signingOut ? "Cerrando sesión…" : "Cerrar sesión"}
                     </button>
 
                     {/* Reset (development only) */}
@@ -215,6 +219,19 @@ export default function UserProfile() {
             )}
 
             {linking && <LinkEmailSheet onClose={() => setLinking(false)} />}
+
+            {signOut.warning && (
+                <SignOutSheet
+                    warning={signOut.warning}
+                    signingOut={signOut.signingOut}
+                    onLinkEmail={() => {
+                        signOut.dismiss();
+                        setLinking(true);
+                    }}
+                    onConfirm={signOut.confirm}
+                    onCancel={signOut.dismiss}
+                />
+            )}
         </div>
     );
 }
