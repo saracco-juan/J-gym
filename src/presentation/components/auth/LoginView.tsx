@@ -8,11 +8,12 @@
  * code. Mobile-first, with inline specific errors.
  */
 
-import { useCallback } from "react";
+import { Suspense, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
 import type { AuthErrorKind } from "@/core/auth";
 import { Barbell } from "@phosphor-icons/react";
+import DeletedNotice from "./DeletedNotice";
 import EmailCodeForm from "./EmailCodeForm";
 import { useEmailCodeFlow } from "./useEmailCodeFlow";
 
@@ -72,6 +73,10 @@ export default function LoginView() {
                 <h1 className="heading-4 text-text-primary">J-GYM</h1>
                 <p className="body-6 text-text-muted">Sobrecarga progresiva</p>
             </div>
+
+            <Suspense fallback={null}>
+                <DeletedNotice />
+            </Suspense>
 
             {/* Card */}
             <div className="w-full max-w-sm rounded-2xl border border-surface-border bg-surface-raised p-6">
