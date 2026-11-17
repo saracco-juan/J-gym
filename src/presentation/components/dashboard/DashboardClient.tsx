@@ -14,7 +14,7 @@ import { startOfWeek } from "date-fns";
 import WeekCalendar from "./WeekCalendar";
 import RoutineSummary from "./RoutineSummary";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
-import { hasRoutines, loadDayData } from "@/infrastructure/local/queries";
+import { hasRoutines, isDayLocked, loadDayData } from "@/infrastructure/local/queries";
 import type { DayDataResult } from "@/infrastructure/local/queries";
 import { waitForFirstPull } from "@/infrastructure/sync/syncRuntime";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
@@ -63,7 +63,6 @@ export default function DashboardClient() {
     const [selectedDate, setSelectedDate] = useState(getTodayStr);
     const [dayData, setDayData] = useState<DayDataResult | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [resumeTemplateId, setResumeTemplateId] = useState<string | null>(null);
     const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
     // ─── Onboarding check ────────────────────────────────────
@@ -103,11 +102,8 @@ export default function DashboardClient() {
 
         let cancelled = false;
         const repos = getLocalRepositories();
-        loadDayData(repos, userId, selectedDate, getTodayStr()).then(async (result) => {
-            const saved = await repos.activeSession.get(userId).catch(() => undefined);
+        loadDayData(repos, userId, selectedDate, getTodayStr()).then((result) => {
             if (cancelled) return;
-            // Only a session started today is resumable; an older one is stale.
-            setResumeTemplateId(saved?.meta?.date === getTodayStr() ? saved.meta.templateId : null);
             setDayData(result);
             setIsLoading(false);
         });
@@ -135,15 +131,22 @@ export default function DashboardClient() {
     const handleStartWorkout = useCallback(
         async (template: IRoutineTemplate) => {
             if (!userId) return;
+            const repos = getLocalRepositories();
+            // The day may have been finished since this screen loaded (another
+            // tab, a synced device): never start a second workout for it.
+            if (await isDayLocked(repos, userId, getTodayStr())) {
+                setDayData(await loadDayData(repos, userId, selectedDate, getTodayStr()));
+                return;
+            }
             // An unfinished session of this routine is resumed, never overwritten.
-            const saved = await getLocalRepositories().activeSession.get(userId);
+            const saved = await repos.activeSession.get(userId);
             const resumable = saved?.meta?.templateId === template.id && saved.meta.date === getTodayStr();
             if (!resumable) {
                 startWorkout(template, userId);
             }
             router.push("/workout");
         },
-        [startWorkout, router, userId]
+        [startWorkout, router, userId, selectedDate]
     );
 
     // ─── Loading ─────────────────────────────────────────────
@@ -211,18 +214,33 @@ export default function DashboardClient() {
                 ) : dayData.type === "template" ? (
                     <div className="flex flex-col gap-4">
                         <RoutineSummary mode="template" template={dayData.data} />
-                        {(isToday || !isPast) && (
+                        {!isPast && (
                             <button
                                 onClick={() => handleStartWorkout(dayData.data)}
-                                disabled={!isToday}
+                                disabled={dayData.action === "future"}
                                 className="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] font-bold text-white text-base transition-all shadow-lg shadow-emerald-900/30 disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed disabled:shadow-none"
                             >
-                                {isToday ? (resumeTemplateId === dayData.data.id ? "Continuar Rutina" : "Empezar Rutina") : "Rutina futura"}
+                                {dayData.action === "resume"
+                                    ? "Continuar Rutina"
+                                    : dayData.action === "start"
+                                        ? "Empezar Rutina"
+                                        : "Rutina futura"}
                             </button>
                         )}
                     </div>
                 ) : (
-                    <RoutineSummary mode="log" log={dayData.data} />
+                    <div className="flex flex-col gap-4">
+                        <RoutineSummary mode="log" log={dayData.data} />
+                        {isToday && (
+                            // Today's workout is finished: the day is locked.
+                            <button
+                                disabled
+                                className="w-full h-14 rounded-2xl font-bold text-base bg-zinc-700 text-zinc-500 cursor-not-allowed"
+                            >
+                                Entrenamiento completado
+                            </button>
+                        )}
+                    </div>
                 )}
             </div>
         </div>

@@ -30,6 +30,7 @@ import {
 import { StandardHypertrophyStrategy } from "@/core/strategies";
 import type { ActiveSessionMeta } from "@/infrastructure/local/db";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
+import { loadRestorableSession } from "@/infrastructure/local/queries";
 
 const hypertrophyStrategy = new StandardHypertrophyStrategy();
 
@@ -94,7 +95,8 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()((set, get
 
     restoreWorkout: async (userId) => {
         const repos = getLocalRepositories();
-        const record = await repos.activeSession.get(userId);
+        // Discards a session whose day is already logged (finished workout).
+        const record = await loadRestorableSession(repos, userId);
         if (!record || !record.meta) return false;
         const routine = (await repos.routines.get(record.meta.templateId)) ?? {
             id: record.meta.templateId,
