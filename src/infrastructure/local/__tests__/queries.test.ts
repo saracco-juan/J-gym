@@ -11,6 +11,7 @@ import {
     loadDayData,
     loadRestorableSession,
     loadPersonalBests,
+    loadStagnantExercises,
     resetUserData,
     saveWeeklyRoutine,
 } from "../queries";
@@ -203,6 +204,22 @@ describe("loadPersonalBests", () => {
         await repos.workoutLogs.save(log("l2", "2026-01-03", 80));
         await repos.workoutLogs.save(log("l3", "2026-01-03", 200, "u2"));
         expect(await loadPersonalBests(repos, "u1")).toEqual({ "bench-press": 80 });
+    });
+});
+
+describe("loadStagnantExercises", () => {
+    function failedLog(id: string, date: string, userId = "u1"): IWorkoutLog {
+        const base = log(id, date, 60, userId);
+        return { ...base, exercises: base.exercises.map((e) => ({ ...e, status: "failed" as const })) };
+    }
+
+    it("returns the exercise keys whose last three sessions failed, for this user only", async () => {
+        await repos.workoutLogs.save(failedLog("l1", "2026-01-01"));
+        await repos.workoutLogs.save(failedLog("l2", "2026-01-04"));
+        await repos.workoutLogs.save(failedLog("l3", "2026-01-08"));
+        await repos.workoutLogs.save(failedLog("l4", "2026-01-09", "u2"));
+        expect([...(await loadStagnantExercises(repos, "u1"))]).toEqual(["bench-press"]);
+        expect((await loadStagnantExercises(repos, "u2")).size).toBe(0);
     });
 });
 

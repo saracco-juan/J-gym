@@ -9,6 +9,7 @@ import { resolveDayView, type DayViewAction } from "@/core/dashboard";
 import { dayNameForDate } from "@/core/schedule";
 import { finalizeSession, type FinalizeResult, type SessionState } from "@/core/session";
 import type { IOverloadStrategy } from "@/core/strategies";
+import { findStagnantExercises } from "@/core/progress";
 import { computePersonalBests } from "@/core/use-cases";
 import type { ActiveSessionRecord } from "./db";
 import type { LocalRepositories } from "./localRepositories";
@@ -103,6 +104,14 @@ export async function loadPersonalBests(
     userId: string
 ): Promise<Record<string, number>> {
     return Object.fromEntries(computePersonalBests(await repos.workoutLogs.listByUser(userId)));
+}
+
+/** Keys of the exercises whose last three performed sessions all failed (see `findStagnantExercises`). */
+export async function loadStagnantExercises(
+    repos: LocalRepositories,
+    userId: string
+): Promise<Set<string>> {
+    return findStagnantExercises(await repos.workoutLogs.listByUser(userId));
 }
 
 /**
