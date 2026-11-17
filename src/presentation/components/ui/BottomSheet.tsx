@@ -6,9 +6,15 @@
  * Presentational: render it only while open. Moves focus into the dialog,
  * keeps Tab inside it, closes on Escape or overlay tap, locks page scroll and
  * restores the previously focused element on close.
+ *
+ * Renders through a portal into `document.body`. An ancestor with a
+ * `transform`, `filter` or `backdrop-filter` (like the sticky header's
+ * backdrop blur) becomes the containing block of `position: fixed`
+ * descendants, which would trap the sheet inside that ancestor.
  */
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react";
 
 interface BottomSheetProps {
@@ -69,7 +75,7 @@ export default function BottomSheet({ title, onClose, children, tall = false }: 
         };
     }, []);
 
-    return (
+    return createPortal(
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
             <div
                 className="absolute inset-0 bg-surface-base/80 backdrop-blur-sm"
@@ -103,6 +109,7 @@ export default function BottomSheet({ title, onClose, children, tall = false }: 
                     {children}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body,
     );
 }

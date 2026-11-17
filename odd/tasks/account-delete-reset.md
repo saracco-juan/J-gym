@@ -18,3 +18,7 @@ Two profile menu actions: delete the whole account, and reset the data while kee
 
 ## Notes
 - Delete ops for routines, logs and custom exercises already existed in the outbox; RLS DELETE policies exist in 0001 and 0002. No policy changes needed.
+
+## Follow-up fixes
+- 2026-11-17: on mobile the sheets rendered squeezed inside the sticky dashboard header. Cause: its `backdrop-blur-sm` (`backdrop-filter`) makes the header the containing block of `position: fixed` children, so `BottomSheet` (`fixed inset-0`) sized itself to the header. Fix on `fix/bottom-sheet-portal`: `BottomSheet` renders through `createPortal` into `document.body` (fixes reset, delete and link-email sheets). No RED: jest runs in a node environment with no component tests; typecheck, lint and jest 713/713 pass. Not checked on a phone yet.
+- 2026-11-17: "Eliminar cuenta" failed in production because migration 0006 (`delete_own_account()`) was never applied. Owner action: run `supabase/migrations/0006_delete_account.sql` in the Supabase SQL editor.
