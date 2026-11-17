@@ -34,7 +34,7 @@ Weight increases are always entered by the user; the app never suggests a weight
 
 ## Stack
 
-Next.js 16 (App Router, server actions) · React 19 · TypeScript (strict) · Tailwind CSS 4 · Zustand · Supabase (Postgres, Auth, Row Level Security) · next-pwa · Jest · GitHub Actions · Vercel.
+Next.js 16 (App Router) · React 19 · TypeScript (strict) · Tailwind CSS 4 · Zustand · Supabase (Postgres, Auth, Row Level Security) · next-pwa · Jest · GitHub Actions · Vercel.
 
 ## Architecture
 
@@ -49,7 +49,7 @@ src/
 │   └── constants/   Default routines, quotes
 ├── infrastructure/  Adapters: Supabase repositories (Repository pattern) and auth clients
 ├── presentation/    React components and Zustand stores
-├── app/             Routes and server actions
+├── app/             Routes
 └── proxy.ts         Route protection (Next 16 proxy)
 ```
 

@@ -1,41 +1,98 @@
 "use client";
 
 /**
- * ActiveWorkoutView — Contenedor principal de la sesión de entrenamiento.
+ * ActiveWorkoutView — Main container of the workout session.
  *
- * Lee activeTemplate del store:
- * - null → estado vacío
- * - template → lista de ExerciseCards + botón Finalizar
+ * Reads the session from the store (backed by the local database):
+ * - none      -> tries to restore a persisted session, else empty state
+ * - session   -> ExerciseCards + finish button
  *
- * Carga PRs anteriores al iniciar y los pasa a cada ExerciseCard.
- * Usa useFinishWorkout para orquestar el guardado al servidor.
+ * PRs come from the local logs, so everything works offline.
  */
 
 import { useState, useEffect } from "react";
 import { useWorkoutStore } from "@/presentation/stores/useWorkoutStore";
+import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import ExerciseCard from "./ExerciseCard";
 import WeightInputModal from "./WeightInputModal";
 import { useFinishWorkout } from "./useFinishWorkout";
 import { Dumbbell, Trophy } from "lucide-react";
-import { fetchExercisePRs } from "@/app/actions/workoutActions";
+import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
+import { loadPersonalBests } from "@/infrastructure/local/queries";
+import type { IRoutineExercise } from "@/core/domain";
+import type { SessionExercise } from "@/core/session";
+
+/** Display shape expected by ExerciseCard: targets of the session sets. */
+function toRoutineExercise(e: SessionExercise): IRoutineExercise {
+    return {
+        exercise: { id: e.key, name: e.name },
+        ref: e.ref,
+        sets: e.sets.map((s) => ({
+            setNumber: s.setNumber,
+            targetReps: s.targetReps,
+            targetWeight: s.targetWeight,
+        })),
+    };
+}
 
 export default function ActiveWorkoutView() {
-    const activeTemplate = useWorkoutStore((s) => s.activeTemplate);
+    const session = useWorkoutStore((s) => s.session);
+    const routine = useWorkoutStore((s) => s.routine);
     const logSet = useWorkoutStore((s) => s.logSet);
+    const restoreWorkout = useWorkoutStore((s) => s.restoreWorkout);
+    const userId = useSyncStore((s) => s.userId);
     const { handleFinish, isSaving, saveError, setSaveError, newPRs } = useFinishWorkout();
     const [prs, setPrs] = useState<Record<string, number>>({});
+    const [isRestoring, setIsRestoring] = useState(true);
 
-    // ─── Cargar PRs al iniciar ────────────────────────────────
+    // ─── Restore a persisted session (app killed or reloaded) ─
 
     useEffect(() => {
-        if (!activeTemplate) return;
-        const names = activeTemplate.exercises.map((e) => e.exercise.name);
-        fetchExercisePRs(names).then(setPrs).catch(() => { });
-    }, [activeTemplate]);
+        if (userId === undefined) return;
+        if (session || !userId) {
+            setIsRestoring(false);
+            return;
+        }
+        let cancelled = false;
+        restoreWorkout(userId)
+            .catch(() => false)
+            .finally(() => {
+                if (!cancelled) setIsRestoring(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+        // Only when the user id resolves: a session started elsewhere must not be re-restored.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userId]);
 
-    // ─── Estado vacío ──────────────────────────────────────────
+    // ─── Load PRs from the local logs ─────────────────────────
 
-    if (!activeTemplate) {
+    const hasSession = session !== null;
+    useEffect(() => {
+        if (!hasSession || !userId) return;
+        let cancelled = false;
+        loadPersonalBests(getLocalRepositories(), userId)
+            .then((bests) => {
+                if (!cancelled) setPrs(bests);
+            })
+            .catch(() => { });
+        return () => {
+            cancelled = true;
+        };
+    }, [hasSession, userId]);
+
+    // ─── Loading / empty state ────────────────────────────────
+
+    if (!session && isRestoring) {
+        return (
+            <div className="flex items-center justify-center py-32">
+                <span className="h-6 w-6 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+            </div>
+        );
+    }
+
+    if (!session) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-6">
                 <div className="w-16 h-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-3xl">
@@ -51,7 +108,9 @@ export default function ActiveWorkoutView() {
         );
     }
 
-    // ─── Sesión activa ─────────────────────────────────────────
+    // ─── Active session ───────────────────────────────────────
+
+    const visible = session.exercises.filter((e) => e.replacedBy === null);
 
     return (
         <div className="flex flex-col gap-4 pb-28">
@@ -61,10 +120,10 @@ export default function ActiveWorkoutView() {
                     Entrenamiento activo
                 </p>
                 <h1 className="text-2xl font-bold text-white mt-1">
-                    {activeTemplate.dayName}
+                    {routine?.dayName ?? ""}
                 </h1>
                 <p className="text-sm text-zinc-500 mt-0.5">
-                    {activeTemplate.exercises.length} ejercicio{activeTemplate.exercises.length !== 1 ? "s" : ""}
+                    {visible.length} ejercicio{visible.length !== 1 ? "s" : ""}
                 </p>
             </div>
 
@@ -80,7 +139,7 @@ export default function ActiveWorkoutView() {
                 </div>
             )}
 
-            {/* Error de guardado */}
+            {/* Save error */}
             {saveError && (
                 <div className="mx-4 flex items-center gap-3 rounded-xl bg-red-900/30 border border-red-700/50 px-4 py-3">
                     <span className="text-sm text-red-300 flex-1">{saveError}</span>
@@ -93,19 +152,20 @@ export default function ActiveWorkoutView() {
                 </div>
             )}
 
-            {/* Lista de ejercicios */}
+            {/* Exercise list */}
             <div className="flex flex-col gap-3 px-4">
-                {activeTemplate.exercises.map((routineExercise) => (
+                {visible.map((exercise) => (
                     <ExerciseCard
-                        key={routineExercise.exercise.id}
-                        routineExercise={routineExercise}
-                        personalRecord={prs[routineExercise.exercise.name]}
+                        key={exercise.key}
+                        routineExercise={toRoutineExercise(exercise)}
+                        personalRecord={prs[exercise.ref.id]}
+                        loggedSets={exercise.sets.map((s) => s.logged)}
                         onLogSet={logSet}
                     />
                 ))}
             </div>
 
-            {/* Botón Finalizar (fijo abajo) */}
+            {/* Finish button (fixed bottom) */}
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-zinc-950 via-zinc-950/95 to-transparent">
                 <button
                     onClick={handleFinish}
@@ -123,7 +183,7 @@ export default function ActiveWorkoutView() {
                 </button>
             </div>
 
-            {/* Modal de peso (condicional, post-evaluación) */}
+            {/* Weight modal (conditional, after evaluation) */}
             <WeightInputModal />
         </div>
     );

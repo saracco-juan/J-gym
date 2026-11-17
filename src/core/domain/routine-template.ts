@@ -6,11 +6,14 @@
  * Solo se actualiza tras una evaluación de sobrecarga progresiva exitosa.
  */
 
+import type { ExerciseRef } from "../catalog/types";
 import type { IExercise, ISetPlan } from "./exercises";
 
 /** Un ejercicio dentro de la plantilla con sus series planeadas. */
 export interface IRoutineExercise {
     exercise: IExercise;
+    /** Catalog or custom reference. Absent on legacy free-text rows. */
+    ref?: ExerciseRef;
     sets: ISetPlan[];
 }
 

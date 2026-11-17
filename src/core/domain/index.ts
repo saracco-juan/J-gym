@@ -5,3 +5,4 @@ export type {
     IWorkoutExercise,
     IWorkoutLog,
 } from "./workout-log";
+export type { ExerciseLogStatus } from "./log-status";

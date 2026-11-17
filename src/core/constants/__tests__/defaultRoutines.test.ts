@@ -67,6 +67,16 @@ describe("mapDefaultRoutineToDays", () => {
         first.exercises.forEach((e) => expect(e.sets).toEqual([]));
     });
 
+    it("attaches a catalog reference to every seed exercise", () => {
+        const [first] = mapDefaultRoutineToDays(["lunes"]);
+        first.exercises.forEach((e, i) => {
+            expect(e.ref).toEqual({
+                source: "catalog",
+                id: routine.days[0].exercises[i].catalogId,
+            });
+        });
+    });
+
     it("generates unique exercise ids, even for a repeated day template", () => {
         const mapped = mapDefaultRoutineToDays(
             Array.from({ length: routine.days.length + 1 }, (_, i) => `d${i}`)
@@ -83,7 +93,7 @@ describe("mapDefaultRoutineToDays", () => {
             days: [
                 {
                     label: "Test",
-                    exercises: [{ name: "X", sets: 3, reps: 8, weight: 20 }],
+                    exercises: [{ name: "X", catalogId: "bench-press", sets: 3, reps: 8, weight: 20 }],
                 },
             ],
         };

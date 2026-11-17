@@ -11,7 +11,7 @@ import { mapDefaultRoutineToDays } from "@/core/constants/defaultRoutines";
 import type { DefaultRoutine } from "@/core/constants/defaultRoutines";
 
 /**
- * Convierte WizardExercise[] a IRoutineExercise[] para la Server Action.
+ * Convierte WizardExercise[] a IRoutineExercise[] para guardarlo en la base local.
  */
 export function wizardToRoutineExercises(exercises: WizardExercise[]): IRoutineExercise[] {
     return exercises.map((ex) => ({

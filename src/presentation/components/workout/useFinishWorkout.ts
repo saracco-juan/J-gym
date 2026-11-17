@@ -1,34 +1,32 @@
 "use client";
 
 /**
- * useFinishWorkout — Custom hook integrador del flujo final de guardado.
+ * useFinishWorkout — Hook that orchestrates the final save.
  *
- * Encapsula:
- * 1. Construcción del IWorkoutLog desde el estado del store.
- * 2. Llamada a la Server Action finalizeWorkoutSession.
- * 3. Manejo de respuesta (reset + redirect o error).
- * 4. Detección de nuevos PRs.
- *
- * Se dispara en dos escenarios:
- * A) finishWorkout sin pesos pendientes → guardar inmediatamente.
- * B) Último peso confirmado en el modal → pendingWeightUpdates vacío → guardar.
+ * Flow (everything local, so it works in airplane mode):
+ * 1. finishWorkout() evaluates the session (pure) and, when an exercise
+ *    earned a weight increase, opens the manual weight modal.
+ * 2. Once no weights are pending: evaluate -> save log -> apply overload to
+ *    the local routine -> clear the active session, in one local transaction
+ *    that also queues both writes for sync.
+ * 3. Show new personal records, reset the store and go back to the dashboard.
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { StandardHypertrophyStrategy } from "@/core/strategies";
+import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
+import { finishWorkoutLocally } from "@/infrastructure/local/queries";
 import { useWorkoutStore } from "@/presentation/stores/useWorkoutStore";
-import { finalizeWorkoutSession } from "@/app/actions/workoutActions";
-import type { IWorkoutLog } from "@/core/domain/workout-log";
+
+const strategy = new StandardHypertrophyStrategy();
 
 export function useFinishWorkout() {
     const router = useRouter();
 
-    const activeTemplate = useWorkoutStore((s) => s.activeTemplate);
-    const currentLogs = useWorkoutStore((s) => s.currentLogs);
     const pendingWeightUpdates = useWorkoutStore((s) => s.pendingWeightUpdates);
-    const evaluations = useWorkoutStore((s) => s.evaluations);
+    const evaluation = useWorkoutStore((s) => s.evaluation);
     const finishWorkout = useWorkoutStore((s) => s.finishWorkout);
-    const resetStore = useWorkoutStore((s) => s.resetStore);
 
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
@@ -36,87 +34,62 @@ export function useFinishWorkout() {
 
     const hasFinished = useRef(false);
 
-    // ─── Construir IWorkoutLog desde el store ────────────────
-
-    const buildWorkoutLog = useCallback((): IWorkoutLog | null => {
-        if (!activeTemplate) return null;
-
-        return {
-            id: crypto.randomUUID(),
-            userId: activeTemplate.userId,
-            templateId: activeTemplate.id,
-            date: new Date().toISOString().split("T")[0],
-            exercises: currentLogs.map((log) => {
-                const found = activeTemplate.exercises.find(
-                    (e) => e.exercise.id === log.exerciseId
-                );
-                return {
-                    exercise: found?.exercise ?? { id: log.exerciseId, name: "Desconocido" },
-                    sets: log.sets,
-                };
-            }),
-            completedAt: new Date().toISOString(),
-        };
-    }, [activeTemplate, currentLogs]);
-
-    // ─── Persistir en servidor ───────────────────────────────
-
-    const saveToServer = useCallback(async () => {
-        if (!activeTemplate || isSaving) return;
-
-        const workoutLog = buildWorkoutLog();
-        if (!workoutLog) return;
+    const saveLocally = useCallback(async () => {
+        const { session, meta, userId, weightOverrides, setFinalizing, resetStore } =
+            useWorkoutStore.getState();
+        if (!session || !meta || !userId || isSaving) return;
 
         setIsSaving(true);
         setSaveError(null);
+        setFinalizing(true);
 
         try {
-            const result = await finalizeWorkoutSession(
-                workoutLog,
-                activeTemplate.exercises
-            );
+            const result = await finishWorkoutLocally(getLocalRepositories(), {
+                userId,
+                routineId: meta.templateId,
+                state: session,
+                logId: meta.logId,
+                date: meta.date,
+                completedAtIso: new Date().toISOString(),
+                strategy,
+                weightOverrides,
+            });
 
-            if (result.success) {
-                // Mostrar PRs antes de resetear
-                if (result.newPRs && result.newPRs.length > 0) {
-                    setNewPRs(result.newPRs);
-                    // Delay redirect to show celebration
-                    setTimeout(() => {
-                        resetStore();
-                        router.push("/dashboard");
-                    }, 3000);
-                } else {
+            if (result.newPRs.length > 0) {
+                setNewPRs(result.newPRs);
+                // Delay the redirect to show the celebration.
+                setTimeout(() => {
                     resetStore();
                     router.push("/dashboard");
-                }
+                }, 3000);
             } else {
-                setSaveError(result.error ?? "Error desconocido al guardar.");
+                resetStore();
+                router.push("/dashboard");
             }
         } catch {
-            setSaveError("Error de conexión. Verificá tu internet e intentá de nuevo.");
+            setFinalizing(false);
+            setSaveError("No se pudo guardar el entrenamiento en el dispositivo. Intentá de nuevo.");
         } finally {
             setIsSaving(false);
         }
-    }, [activeTemplate, isSaving, buildWorkoutLog, resetStore, router]);
+    }, [isSaving, router]);
 
-    // ─── Disparador: click en "Finalizar Entrenamiento" ──────
-
+    // Click on "Finalizar Entrenamiento".
     const handleFinish = useCallback(() => {
         finishWorkout();
         hasFinished.current = true;
     }, [finishWorkout]);
 
-    // ─── Disparador reactivo: cuando pendingWeightUpdates queda vacío ─
-
+    // Reactive trigger: nothing left waiting for a manual weight.
     useEffect(() => {
         if (!hasFinished.current) return;
-        if (evaluations.length === 0) return;
+        if (!evaluation) return;
 
         if (pendingWeightUpdates.length === 0 && !isSaving) {
-            saveToServer();
             hasFinished.current = false;
+            void saveLocally();
         }
-    }, [pendingWeightUpdates, evaluations, isSaving, saveToServer]);
+    }, [pendingWeightUpdates, evaluation, isSaving, saveLocally]);
 
     return {
         handleFinish,

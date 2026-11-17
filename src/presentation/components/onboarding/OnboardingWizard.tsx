@@ -16,8 +16,9 @@ import RoutineTypeSelector from "./RoutineTypeSelector";
 import ExerciseSetup from "./ExerciseSetup";
 import type { DayExercises } from "./ExerciseSetup";
 import { generateDefaultRoutine, wizardToRoutineExercises } from "./defaultRoutine";
-import { saveWeeklyRoutine } from "@/app/actions/onboardingActions";
-import type { OnboardingTemplate } from "@/app/actions/onboardingActions";
+import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
+import { saveWeeklyRoutine, type WeeklyRoutineInput } from "@/infrastructure/local/queries";
+import { useSyncStore } from "@/presentation/stores/useSyncStore";
 
 type Step = 1 | 2 | 3 | 4;
 const TOTAL_STEPS = 4;
@@ -29,6 +30,7 @@ const DAY_LABELS: Record<string, string> = {
 
 export default function OnboardingWizard() {
     const router = useRouter();
+    const userId = useSyncStore((s) => s.userId);
     const [step, setStep] = useState<Step>(1);
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
     const [routineType, setRoutineType] = useState<"default" | "custom" | null>(null);
@@ -70,7 +72,7 @@ export default function OnboardingWizard() {
 
     // ─── Save ────────────────────────────────────────────────
 
-    const buildTemplates = useCallback((): OnboardingTemplate[] => {
+    const buildTemplates = useCallback((): WeeklyRoutineInput[] => {
         return dayExercises.map((day) => ({
             dayName: day.dayName,
             exercises: wizardToRoutineExercises(day.exercises),
@@ -78,16 +80,21 @@ export default function OnboardingWizard() {
     }, [dayExercises]);
 
     const handleSave = useCallback(async () => {
+        if (!userId) {
+            setSaveError("No se encontró tu sesión. Volvé a iniciar sesión.");
+            return;
+        }
         setIsSaving(true);
         setSaveError(null);
-        const result = await saveWeeklyRoutine(buildTemplates());
-        if (result.success) {
+        try {
+            // Local write (works offline); the sync engine uploads it later.
+            await saveWeeklyRoutine(getLocalRepositories(), userId, buildTemplates());
             router.push("/dashboard");
-        } else {
-            setSaveError(result.error ?? "Error desconocido.");
+        } catch {
+            setSaveError("No se pudo guardar la rutina en el dispositivo. Intentá de nuevo.");
             setIsSaving(false);
         }
-    }, [buildTemplates, router]);
+    }, [buildTemplates, router, userId]);
 
     // ─── Render ──────────────────────────────────────────────
 

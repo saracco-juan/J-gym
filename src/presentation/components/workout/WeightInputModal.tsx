@@ -14,7 +14,7 @@ import { useWorkoutStore } from "@/presentation/stores/useWorkoutStore";
 import { TrendingUp } from "lucide-react";
 
 export default function WeightInputModal() {
-    const activeTemplate = useWorkoutStore((s) => s.activeTemplate);
+    const session = useWorkoutStore((s) => s.session);
     const pendingWeightUpdates = useWorkoutStore((s) => s.pendingWeightUpdates);
     const isWeightModalOpen = useWorkoutStore((s) => s.isWeightModalOpen);
     const confirmNewWeight = useWorkoutStore((s) => s.confirmNewWeight);
@@ -48,12 +48,12 @@ export default function WeightInputModal() {
 
     // Resolver nombre de cada ejercicio pendiente
     const pendingExercises = pendingWeightUpdates.map((id) => {
-        const found = activeTemplate?.exercises.find(
-            (e) => e.exercise.id === id
+        const found = session?.exercises.find(
+            (e) => e.key === id
         );
         return {
             id,
-            name: found?.exercise.name ?? "Ejercicio",
+            name: found?.name ?? "Ejercicio",
         };
     });
 

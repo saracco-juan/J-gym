@@ -14,12 +14,15 @@ import { Trophy } from "lucide-react";
 interface ExerciseCardProps {
     routineExercise: IRoutineExercise;
     personalRecord?: number;
+    /** Logged values per set index (null = not logged yet). */
+    loggedSets?: ({ reps: number; weight: number } | null)[];
     onLogSet: (exerciseId: string, setIndex: number, reps: number, weight: number) => void;
 }
 
 export default function ExerciseCard({
     routineExercise,
     personalRecord,
+    loggedSets,
     onLogSet,
 }: ExerciseCardProps) {
     const { exercise, sets } = routineExercise;
@@ -56,6 +59,7 @@ export default function ExerciseCard({
                         setIndex={index}
                         targetReps={setPlan.targetReps}
                         targetWeight={setPlan.targetWeight}
+                        initialLogged={loggedSets?.[index] ?? null}
                         onLog={onLogSet}
                     />
                 ))}
