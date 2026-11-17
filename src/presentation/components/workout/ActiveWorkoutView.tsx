@@ -17,13 +17,14 @@ import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import ExerciseCard from "./ExerciseCard";
 import ExercisePicker from "./ExercisePicker";
 import FinishConfirmDialog from "./FinishConfirmDialog";
+import { historyHref } from "@/presentation/components/history/historyHref";
 import TipsSheet from "./TipsSheet";
 import WeightInputModal from "./WeightInputModal";
 import WorkoutSkeleton from "./WorkoutSkeleton";
 import { useFinishWorkout } from "./useFinishWorkout";
 import { Barbell, Plus, Trophy } from "@phosphor-icons/react";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
-import { loadPersonalBests } from "@/infrastructure/local/queries";
+import { loadPersonalBests, loadStagnantExercises } from "@/infrastructure/local/queries";
 import { getCatalogExercise, type ExerciseRef } from "@/core/catalog";
 import { countUnloggedExercises, type ExerciseDescriptor } from "@/core/session";
 
@@ -42,6 +43,7 @@ export default function ActiveWorkoutView() {
     const userId = useSyncStore((s) => s.userId);
     const { handleFinish, isSaving, saveError, setSaveError, newPRs } = useFinishWorkout();
     const [prs, setPrs] = useState<Record<string, number>>({});
+    const [stagnant, setStagnant] = useState<ReadonlySet<string>>(new Set());
     const [isRestoring, setIsRestoring] = useState(true);
     const [confirmingFinish, setConfirmingFinish] = useState(false);
     const [tipsKey, setTipsKey] = useState<string | null>(null);
@@ -78,6 +80,21 @@ export default function ActiveWorkoutView() {
         loadPersonalBests(getLocalRepositories(), userId)
             .then((bests) => {
                 if (!cancelled) setPrs(bests);
+            })
+            .catch(() => { });
+        return () => {
+            cancelled = true;
+        };
+    }, [hasSession, userId]);
+
+    // ─── Stagnant exercises from the local logs ───────────────
+
+    useEffect(() => {
+        if (!hasSession || !userId) return;
+        let cancelled = false;
+        loadStagnantExercises(getLocalRepositories(), userId)
+            .then((keys) => {
+                if (!cancelled) setStagnant(keys);
             })
             .catch(() => { });
         return () => {
@@ -192,6 +209,7 @@ export default function ActiveWorkoutView() {
                         exercise={exercise}
                         replacesName={nameOf(exercise.plannedExerciseId)}
                         personalRecord={prs[exercise.ref.id]}
+                        stagnant={stagnant.has(exercise.ref.id)}
                         onCompleteSet={(setNumber) =>
                             dispatch({ type: "completeSetAsPlanned", exerciseKey: exercise.key, setNumber })
                         }
@@ -241,6 +259,7 @@ export default function ActiveWorkoutView() {
                 <TipsSheet
                     exerciseName={tipsExercise.name}
                     tips={tips}
+                    historyHref={historyHref(tipsExercise.ref.id)}
                     onClose={() => setTipsKey(null)}
                 />
             )}

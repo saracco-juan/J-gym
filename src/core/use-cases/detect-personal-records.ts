@@ -15,7 +15,7 @@
 import { resolveLegacyExerciseName } from "../catalog";
 import type { IWorkoutExercise } from "../domain/workout-log";
 
-export function exerciseKey(ex: IWorkoutExercise): string {
+export function exerciseKey(ex: Pick<IWorkoutExercise, "exercise" | "ref">): string {
     return ex.ref?.id ?? resolveLegacyExerciseName(ex.exercise.name) ?? ex.exercise.name;
 }
 

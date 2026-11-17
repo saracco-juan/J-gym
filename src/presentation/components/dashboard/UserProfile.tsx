@@ -15,7 +15,7 @@ import { resetUserData } from "@/infrastructure/local/queries";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import { signOutAndClear } from "@/infrastructure/sync/syncRuntime";
 import { getUserDisplay } from "@/core/domain/user-display";
-import { SignOut, ArrowCounterClockwise } from "@phosphor-icons/react";
+import { SignOut, ArrowCounterClockwise, PencilSimple } from "@phosphor-icons/react";
 
 interface UserInfo {
     email: string;
@@ -144,6 +144,16 @@ export default function UserProfile() {
                             <p className="caption-5 truncate text-text-muted">{user.email}</p>
                         )}
                     </div>
+
+                    {/* Routine editor */}
+                    <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => router.push("/routine")}
+                        className="pressable body-5 flex min-h-12 w-full items-center gap-3 rounded-sm px-3 py-2 text-text-primary hover:bg-surface-strong"
+                    >
+                        <PencilSimple size={20} weight="bold" /> Editar rutina
+                    </button>
 
                     {/* Logout */}
                     <button
