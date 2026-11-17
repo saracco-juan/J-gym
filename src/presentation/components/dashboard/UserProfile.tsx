@@ -28,6 +28,7 @@ import {
     PencilSimple,
     UserCircle,
     Envelope,
+    Trophy,
 } from "@phosphor-icons/react";
 
 const MENU_ITEM =
@@ -160,6 +161,16 @@ export default function UserProfile() {
                             Ese nombre ya está en uso. Elegí otro en tu perfil.
                         </p>
                     )}
+
+                    {/* Leaderboard */}
+                    <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => router.push("/leaderboard")}
+                        className={MENU_ITEM}
+                    >
+                        <Trophy size={20} weight="bold" /> Tabla del gym
+                    </button>
 
                     {/* Routine editor */}
                     <button

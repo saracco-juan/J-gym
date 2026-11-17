@@ -6,6 +6,7 @@
  */
 
 import DashboardClient from "@/presentation/components/dashboard/DashboardClient";
+import LeaderboardLink from "@/presentation/components/dashboard/LeaderboardLink";
 import UserProfile from "@/presentation/components/dashboard/UserProfile";
 import SyncBadge from "@/presentation/components/sync/SyncBadge";
 
@@ -23,6 +24,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <SyncBadge />
+                        <LeaderboardLink />
                         <UserProfile />
                     </div>
                 </div>
