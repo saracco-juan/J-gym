@@ -103,7 +103,7 @@ export default function ActiveWorkoutView() {
                 <p className="body-6 max-w-xs text-text-secondary">
                     Seleccioná una rutina desde el calendario para comenzar tu sesión.
                 </p>
-                <Link href="/dashboard" className="btn-primary button-md">
+                <Link href="/dashboard" className="btn-primary button-md hover:bg-accent-hover active:scale-98">
                     Ir al calendario
                 </Link>
             </div>
