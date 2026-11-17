@@ -6,3 +6,4 @@ export type {
     IWorkoutLog,
 } from "./workout-log";
 export type { ExerciseLogStatus } from "./log-status";
+export type { IProfile } from "./profile";
