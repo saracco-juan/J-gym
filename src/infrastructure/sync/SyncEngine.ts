@@ -22,6 +22,7 @@ import {
     classifySyncError,
     detachTemplate,
     planFlush,
+    shouldDropFailedEntry,
     toSyncCommand,
     type SyncCommand,
     type SyncErrorInfo,
@@ -243,6 +244,13 @@ export class SyncEngine {
             } catch (error) {
                 const info = errorInfo(error);
                 const kind = classifySyncError(info);
+
+                if (shouldDropFailedEntry(entry.entity, kind)) {
+                    // Derived data: it is recomputed and enqueued again on the
+                    // next trigger, so a refusal never pauses or burns the queue.
+                    await repos.outbox.complete(entry.id);
+                    continue;
+                }
 
                 if (kind === "auth") return "paused";
                 if (kind === "network") return "offline";
