@@ -226,8 +226,11 @@ export default function DashboardClient() {
             </div>
 
             <div className="px-4">
-                <h2 className="heading-6 text-text-primary">
+                <h2 className="heading-6 flex items-center gap-2 text-text-primary">
                     {isToday ? "Hoy" : isPast ? "Registro" : "Plan"}
+                    {dayData?.type === "template" && dayData.swapped && (
+                        <span className="caption-4 rounded-full border border-surface-border px-2 py-0.5 text-text-muted">Intercambiado</span>
+                    )}
                 </h2>
                 <p className="caption-5 text-text-muted">
                     {new Date(selectedDate + "T00:00:00").toLocaleDateString("es-AR", {

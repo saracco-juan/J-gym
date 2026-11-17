@@ -19,6 +19,7 @@ The UI is in Spanish.
 - **Gym table** (`/leaderboard`): every registered user with a profile is ranked by streak, weekly volume or progress of the month, with level, status and achievements on a card. Each device computes its own stats from local data and publishes one snapshot; offline it shows the last board it saw. The numbers are self reported and only describe what happened: the app never suggests a weight.
 - **Onboarding:** pick your training days, start from a default routine or build your own.
 - **Weekly calendar** with the routine of the day and a motivational quote on rest days.
+- **Swap days this week** (`/routine`, "Esta semana"): trade the routines of two training days of the current week, for example Legs on Monday and Cardio on Tuesday. Only days from today on, with no workout logged, can be swapped, and not today while a workout is in progress. Next week goes back to the normal routine on its own. Swaps are stored only on this device (not synced).
 - **Workout session:** log reps and weight per set, then finish to save an immutable log.
 - **Personal records** detected when a session beats your previous best weight.
 - **Progressive overload engine** updates the next session's scheme from your performance.

@@ -14,8 +14,11 @@ import {
     loadPersonalBests,
     loadStagnantExercises,
     loadRoutineEditor,
+    loadWeekPlan,
     resetUserData,
+    resetWeek,
     saveRoutineEdits,
+    swapDays,
     saveWeeklyRoutine,
 } from "../queries";
 
@@ -419,5 +422,134 @@ describe("finishWorkoutLocally", () => {
         expect(result.log.id).toBe("log-fixed");
         expect(await repos.workoutLogs.get("log-fixed")).toBeDefined();
         expect(await repos.routines.get("r1")).toBeUndefined();
+    });
+});
+
+describe("week day swap", () => {
+    // Week of Monday 2026-11-16 .. Sunday 2026-11-22; today is Monday.
+    const MON = "2026-11-16";
+    const TUE = "2026-11-17";
+    const WED = "2026-11-18";
+    const tuesday: IRoutineTemplate = { id: "r2", userId: "u1", dayName: "martes", exercises: [bench, bench] };
+
+    beforeEach(async () => {
+        await repos.routines.save(monday);
+        await repos.routines.save(tuesday);
+    });
+
+    it("shows the swapped routine on each date and flags it", async () => {
+        expect(await swapDays(repos, "u1", MON, MON, TUE)).toEqual({ ok: true });
+        expect(await loadDayData(repos, "u1", MON, MON)).toMatchObject({
+            type: "template",
+            data: { id: "r2" },
+            swapped: true,
+        });
+        expect(await loadDayData(repos, "u1", TUE, MON)).toMatchObject({
+            type: "template",
+            data: { id: "r1" },
+            swapped: true,
+        });
+        // Next week is back to normal.
+        expect(await loadDayData(repos, "u1", "2026-11-23", MON)).toMatchObject({
+            data: { id: "r1" },
+            swapped: false,
+        });
+    });
+
+    it("resumes a session of the swapped routine started today", async () => {
+        await swapDays(repos, "u1", MON, MON, TUE);
+        await repos.activeSession.put("u1", createSession([bench, bench]), {
+            templateId: "r2",
+            dayName: "martes",
+            date: MON,
+            startedAt: 1,
+            logId: "l9",
+        });
+        expect(await loadDayData(repos, "u1", MON, MON)).toMatchObject({ action: "resume" });
+    });
+
+    it("lists the week with natural and effective weekdays", async () => {
+        await swapDays(repos, "u1", MON, MON, TUE);
+        const plan = await loadWeekPlan(repos, "u1", MON);
+        expect(plan.days.map((d) => d.date)).toHaveLength(7);
+        expect(plan.days[0]).toMatchObject({
+            date: MON,
+            naturalDayName: "lunes",
+            dayName: "martes",
+            exerciseCount: 2,
+            swapped: true,
+            isToday: true,
+            logged: false,
+        });
+        expect(plan.days[2]).toMatchObject({ date: WED, exerciseCount: 0, swapped: false });
+        expect(plan.hasSwaps).toBe(true);
+        expect(plan.resetBlocked).toBeNull();
+    });
+
+    it("swapping back leaves no overrides", async () => {
+        await swapDays(repos, "u1", MON, MON, TUE);
+        await swapDays(repos, "u1", MON, TUE, MON);
+        expect(await repos.dayOverrides.listForRange("u1", MON, "2026-11-22")).toEqual([]);
+    });
+
+    it("refuses blocked swaps without writing", async () => {
+        expect(await swapDays(repos, "u1", MON, MON, WED)).toEqual({ ok: false, reason: "rest-day" });
+        expect(await swapDays(repos, "u1", TUE, MON, TUE)).toEqual({ ok: false, reason: "past" });
+        await repos.workoutLogs.save(log("l1", MON, 60));
+        expect(await swapDays(repos, "u1", MON, MON, TUE)).toEqual({ ok: false, reason: "logged" });
+        expect(await repos.dayOverrides.listForRange("u1", MON, "2026-11-22")).toEqual([]);
+    });
+
+    it("refuses a swap with today during an active session", async () => {
+        await repos.activeSession.put("u1", createSession([bench]), {
+            templateId: "r1",
+            dayName: "lunes",
+            date: MON,
+            startedAt: 1,
+            logId: "l9",
+        });
+        expect(await swapDays(repos, "u1", MON, MON, TUE)).toEqual({
+            ok: false,
+            reason: "session-in-progress",
+        });
+    });
+
+    it("resets the week, unless a swapped day is already past", async () => {
+        await swapDays(repos, "u1", MON, MON, TUE);
+        expect(await resetWeek(repos, "u1", MON)).toEqual({ ok: true });
+        expect((await loadWeekPlan(repos, "u1", MON)).hasSwaps).toBe(false);
+
+        await swapDays(repos, "u1", MON, MON, TUE);
+        expect(await resetWeek(repos, "u1", TUE)).toEqual({ ok: false, reason: "past" });
+    });
+
+    it("drops overrides of earlier weeks when the week is rewritten", async () => {
+        await swapDays(repos, "u1", MON, MON, TUE);
+        await repos.routines.save({ ...tuesday, id: "r3", dayName: "jueves" });
+        const nextMon = "2026-11-23";
+        await swapDays(repos, "u1", nextMon, "2026-11-24", "2026-11-26");
+        expect(await repos.dayOverrides.listForRange("u1", "2026-01-01", "2026-12-31")).toEqual([
+            { userId: "u1", date: "2026-11-24", dayName: "jueves" },
+            { userId: "u1", date: "2026-11-26", dayName: "martes" },
+        ]);
+    });
+
+    it("never touches the outbox", async () => {
+        const before = await repos.outbox.count();
+        await swapDays(repos, "u1", MON, MON, TUE);
+        await resetWeek(repos, "u1", MON);
+        expect(await repos.outbox.count()).toBe(before);
+    });
+
+    it("is cleared by resetUserData and clearAll", async () => {
+        await swapDays(repos, "u1", MON, MON, TUE);
+        await resetUserData(repos, "u1");
+        expect(await repos.dayOverrides.listForRange("u1", MON, "2026-11-22")).toEqual([]);
+
+        await repos.routines.save(monday);
+        await repos.routines.save(tuesday);
+        await swapDays(repos, "u1", MON, MON, TUE);
+        await repos.sync.clearAll();
+        expect(await repos.dayOverrides.listForRange("u1", MON, "2026-11-22")).toEqual([]);
     });
 });
