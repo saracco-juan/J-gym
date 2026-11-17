@@ -14,6 +14,7 @@ export const MUSCLE_GROUPS: readonly MuscleGroup[] = [
     "shoulders",
     "arms",
     "core",
+    "cardio",
 ];
 
 const MUSCLE_GROUP_LABELS: Record<MuscleGroup, string> = {
@@ -24,6 +25,7 @@ const MUSCLE_GROUP_LABELS: Record<MuscleGroup, string> = {
     shoulders: "Hombros",
     arms: "Brazos",
     core: "Core",
+    cardio: "Cardio",
 };
 
 export function muscleGroupLabel(group: MuscleGroup): string {

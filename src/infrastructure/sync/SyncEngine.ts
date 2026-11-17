@@ -22,6 +22,7 @@ import {
     classifySyncError,
     detachTemplate,
     planFlush,
+    shouldDropFailedEntry,
     toSyncCommand,
     type SyncCommand,
     type SyncErrorInfo,
@@ -244,6 +245,13 @@ export class SyncEngine {
                 const info = errorInfo(error);
                 const kind = classifySyncError(info);
 
+                if (shouldDropFailedEntry(entry.entity, kind)) {
+                    // Derived data: it is recomputed and enqueued again on the
+                    // next trigger, so a refusal never pauses or burns the queue.
+                    await repos.outbox.complete(entry.id);
+                    continue;
+                }
+
                 if (kind === "auth") return "paused";
                 if (kind === "network") return "offline";
 
@@ -253,6 +261,13 @@ export class SyncEngine {
                         // The entry now lives under the server id: replan.
                         return "rerun";
                     }
+                }
+
+                if (kind === "unique-conflict" && entry.entity === "profile") {
+                    // The display name is taken: retrying cannot help. Park the
+                    // refusal for the UI and keep sending the rest of the queue.
+                    await repos.sync.rejectProfileWrite(entry);
+                    continue;
                 }
 
                 if (kind === "missing-parent" && (await this.sendDetached(entry, command))) {

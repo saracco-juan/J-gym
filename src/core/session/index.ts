@@ -19,6 +19,7 @@ export {
     exerciseCardStatus,
     exerciseStatusLabel,
     formatExerciseScheme,
+    formatSetTarget,
     formatSetValue,
     formatWeight,
     parseSetInput,

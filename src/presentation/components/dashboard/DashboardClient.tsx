@@ -5,7 +5,8 @@
  *
  * Mantiene estados: activeWeek + selectedDate.
  * Coordina WeekCalendar + RoutineSummary.
- * Redirige a /onboarding si el usuario no tiene rutinas.
+ * Redirige a /onboarding si el usuario no tiene rutinas y a /profile si un
+ * usuario registrado todavía no tiene perfil.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -13,15 +14,20 @@ import { useRouter } from "next/navigation";
 import { startOfWeek } from "date-fns";
 import WeekCalendar from "./WeekCalendar";
 import RoutineSummary from "./RoutineSummary";
+import DashboardSkeleton, { ExerciseListSkeleton } from "./DashboardSkeleton";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
-import { hasRoutines, loadDayData } from "@/infrastructure/local/queries";
+import { hasRoutines, isDayLocked, loadDayData, loadStagnantExercises } from "@/infrastructure/local/queries";
 import type { DayDataResult } from "@/infrastructure/local/queries";
-import { waitForFirstPull } from "@/infrastructure/sync/syncRuntime";
+import { refreshOwnProfile, waitForFirstPull } from "@/infrastructure/sync/syncRuntime";
+import LinkEmailBanner from "@/presentation/components/auth/LinkEmailBanner";
+import { useAuthStore } from "@/presentation/stores/useAuthStore";
+import { refreshProfile, useProfileStore } from "@/presentation/stores/useProfileStore";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import { useWorkoutStore } from "@/presentation/stores/useWorkoutStore";
 import type { IRoutineTemplate } from "@/core/domain/routine-template";
 import { getDailyQuote } from "@/core/constants/quotes";
-import { Moon } from "lucide-react";
+import { decideProfileGate } from "@/core/profile";
+import { Moon } from "@phosphor-icons/react";
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
@@ -63,7 +69,7 @@ export default function DashboardClient() {
     const [selectedDate, setSelectedDate] = useState(getTodayStr);
     const [dayData, setDayData] = useState<DayDataResult | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [resumeTemplateId, setResumeTemplateId] = useState<string | null>(null);
+    const [stagnant, setStagnant] = useState<ReadonlySet<string>>(new Set());
     const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
 
     // ─── Onboarding check ────────────────────────────────────
@@ -96,6 +102,31 @@ export default function DashboardClient() {
         };
     }, [router, userId]);
 
+    // ─── Profile check ───────────────────────────────────────
+    // After onboarding, a registered user without a profile goes to /profile.
+    // Anonymous accounts get the link-email banner instead.
+
+    const authUser = useAuthStore((s) => s.user);
+    const profile = useProfileStore((s) => s.profile);
+
+    useEffect(() => {
+        if (isCheckingOnboarding || !userId || !authUser || profile === undefined) return;
+        const gate = decideProfileGate({
+            isAnonymous: authUser.isAnonymous,
+            hasProfile: profile !== null,
+        });
+        if (gate !== "setup-profile") return;
+        let cancelled = false;
+        void refreshOwnProfile(userId).then(async (found) => {
+            if (cancelled) return;
+            if (found) await refreshProfile(userId);
+            else router.replace("/profile");
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [isCheckingOnboarding, userId, authUser, profile, router]);
+
     // ─── Read data on date change (local database) ───────────
 
     useEffect(() => {
@@ -103,11 +134,8 @@ export default function DashboardClient() {
 
         let cancelled = false;
         const repos = getLocalRepositories();
-        loadDayData(repos, userId, selectedDate, getTodayStr()).then(async (result) => {
-            const saved = await repos.activeSession.get(userId).catch(() => undefined);
+        loadDayData(repos, userId, selectedDate, getTodayStr()).then((result) => {
             if (cancelled) return;
-            // Only a session started today is resumable; an older one is stale.
-            setResumeTemplateId(saved?.meta?.date === getTodayStr() ? saved.meta.templateId : null);
             setDayData(result);
             setIsLoading(false);
         });
@@ -116,6 +144,21 @@ export default function DashboardClient() {
             cancelled = true;
         };
     }, [selectedDate, isCheckingOnboarding, userId]);
+
+    // ─── Stagnant exercises (local logs) ─────────────────────
+
+    useEffect(() => {
+        if (isCheckingOnboarding || !userId) return;
+        let cancelled = false;
+        loadStagnantExercises(getLocalRepositories(), userId)
+            .then((keys) => {
+                if (!cancelled) setStagnant(keys);
+            })
+            .catch(() => { });
+        return () => {
+            cancelled = true;
+        };
+    }, [isCheckingOnboarding, userId]);
 
     // ─── Week navigation ────────────────────────────────────
 
@@ -135,25 +178,28 @@ export default function DashboardClient() {
     const handleStartWorkout = useCallback(
         async (template: IRoutineTemplate) => {
             if (!userId) return;
+            const repos = getLocalRepositories();
+            // The day may have been finished since this screen loaded (another
+            // tab, a synced device): never start a second workout for it.
+            if (await isDayLocked(repos, userId, getTodayStr())) {
+                setDayData(await loadDayData(repos, userId, selectedDate, getTodayStr()));
+                return;
+            }
             // An unfinished session of this routine is resumed, never overwritten.
-            const saved = await getLocalRepositories().activeSession.get(userId);
+            const saved = await repos.activeSession.get(userId);
             const resumable = saved?.meta?.templateId === template.id && saved.meta.date === getTodayStr();
             if (!resumable) {
                 startWorkout(template, userId);
             }
             router.push("/workout");
         },
-        [startWorkout, router, userId]
+        [startWorkout, router, userId, selectedDate]
     );
 
     // ─── Loading ─────────────────────────────────────────────
 
     if (isCheckingOnboarding) {
-        return (
-            <div className="flex items-center justify-center py-32">
-                <span className="h-6 w-6 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
-            </div>
-        );
+        return <DashboardSkeleton />;
     }
 
     // ─── Render ──────────────────────────────────────────────
@@ -163,6 +209,8 @@ export default function DashboardClient() {
 
     return (
         <div className="flex flex-col gap-4">
+            <LinkEmailBanner />
+
             <WeekCalendar
                 activeWeek={activeWeek}
                 selectedDate={selectedDate}
@@ -171,17 +219,17 @@ export default function DashboardClient() {
             />
 
             {/* Daily motivational quote */}
-            <div className="mx-4 rounded-xl bg-zinc-900/60 border border-zinc-800 px-4 py-3">
-                <p className="text-sm text-zinc-400 italic leading-relaxed">
+            <div className="mx-4 rounded-xl border border-surface-border bg-surface-raised px-4 py-3">
+                <p className="body-6 text-text-secondary">
                     &ldquo;{getDailyQuote()}&rdquo;
                 </p>
             </div>
 
             <div className="px-4">
-                <h2 className="text-lg font-bold text-white">
+                <h2 className="heading-6 text-text-primary">
                     {isToday ? "Hoy" : isPast ? "Registro" : "Plan"}
                 </h2>
-                <p className="text-xs text-zinc-500">
+                <p className="caption-5 text-text-muted">
                     {new Date(selectedDate + "T00:00:00").toLocaleDateString("es-AR", {
                         weekday: "long",
                         day: "numeric",
@@ -192,37 +240,51 @@ export default function DashboardClient() {
 
             <div className="px-4 pb-8">
                 {isLoading ? (
-                    <div className="flex items-center justify-center py-16">
-                        <span className="h-6 w-6 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
-                    </div>
+                    <ExerciseListSkeleton />
                 ) : !dayData || dayData.type === "empty" ? (
-                    <div className="flex flex-col items-center justify-center py-16 gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-2xl">
-                            <Moon size={24} className="text-zinc-500" />
+                    <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+                        <div className="flex size-16 items-center justify-center rounded-xl border border-surface-border bg-surface-raised">
+                            <Moon size={32} weight="bold" className="text-text-muted" />
                         </div>
-                        <p className="text-sm text-zinc-500 text-center">
+                        <h3 className="title-2 text-text-primary">
+                            {isPast ? "Sin registro" : "Día de descanso"}
+                        </h3>
+                        <p className="body-6 max-w-xs text-text-secondary">
                             {isPast ? "No se entrenó este día." : "No hay rutina asignada para este día."}
                         </p>
                     </div>
                 ) : dayData.type === "error" ? (
-                    <div className="rounded-xl bg-red-900/20 border border-red-800/50 px-4 py-3">
-                        <p className="text-sm text-red-300">{dayData.error}</p>
+                    <div role="alert" className="rounded-xl border border-danger-border bg-danger-soft px-4 py-3">
+                        <p className="body-6 text-danger-text">{dayData.error}</p>
                     </div>
                 ) : dayData.type === "template" ? (
                     <div className="flex flex-col gap-4">
-                        <RoutineSummary mode="template" template={dayData.data} />
-                        {(isToday || !isPast) && (
+                        <RoutineSummary mode="template" template={dayData.data} stagnant={stagnant} />
+                        {!isPast && (
                             <button
+                                type="button"
                                 onClick={() => handleStartWorkout(dayData.data)}
-                                disabled={!isToday}
-                                className="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] font-bold text-white text-base transition-all shadow-lg shadow-emerald-900/30 disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed disabled:shadow-none"
+                                disabled={dayData.action === "future"}
+                                className="btn-primary w-full button-md"
                             >
-                                {isToday ? (resumeTemplateId === dayData.data.id ? "Continuar Rutina" : "Empezar Rutina") : "Rutina futura"}
+                                {dayData.action === "resume"
+                                    ? "Continuar rutina"
+                                    : dayData.action === "start"
+                                        ? "Empezar rutina"
+                                        : "Rutina futura"}
                             </button>
                         )}
                     </div>
                 ) : (
-                    <RoutineSummary mode="log" log={dayData.data} />
+                    <div className="flex flex-col gap-4">
+                        <RoutineSummary mode="log" log={dayData.data} stagnant={stagnant} />
+                        {isToday && (
+                            // Today's workout is finished: the day is locked.
+                            <button type="button" disabled className="btn-primary w-full button-md">
+                                Entrenamiento completado
+                            </button>
+                        )}
+                    </div>
                 )}
             </div>
         </div>

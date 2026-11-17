@@ -8,7 +8,7 @@ import ActiveWorkoutView from "@/presentation/components/workout/ActiveWorkoutVi
 
 export default function WorkoutPage() {
     return (
-        <main className="min-h-screen bg-zinc-950">
+        <main className="min-h-screen bg-surface-base">
             <ActiveWorkoutView />
         </main>
     );

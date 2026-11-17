@@ -43,7 +43,11 @@ export function createSupabaseTransport(client: SupabaseClient): SyncTransport {
         async execute(command: SyncCommand): Promise<void> {
             switch (command.kind) {
                 case "upsert":
-                    return run(client.from(command.table).upsert(command.row, { onConflict: "id" }));
+                    return run(
+                        client
+                            .from(command.table)
+                            .upsert(command.row, { onConflict: command.onConflict ?? "id" })
+                    );
                 case "delete":
                     return run(client.from(command.table).delete().eq("id", command.id));
                 case "soft-delete":
@@ -61,6 +65,12 @@ export function createSupabaseTransport(client: SupabaseClient): SyncTransport {
             select(
                 client.from("custom_exercises").select("*").eq("user_id", userId).is("deleted_at", null)
             ),
+        async fetchProfile(userId) {
+            const rows = await select(
+                client.from("profiles").select("*").eq("user_id", userId).limit(1)
+            );
+            return rows[0] ?? null;
+        },
         fetchLogsSince: (userId, sinceDate) =>
             select(
                 client

@@ -11,17 +11,20 @@
  */
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useWorkoutStore } from "@/presentation/stores/useWorkoutStore";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import ExerciseCard from "./ExerciseCard";
 import ExercisePicker from "./ExercisePicker";
 import FinishConfirmDialog from "./FinishConfirmDialog";
+import { historyHref } from "@/presentation/components/history/historyHref";
 import TipsSheet from "./TipsSheet";
 import WeightInputModal from "./WeightInputModal";
+import WorkoutSkeleton from "./WorkoutSkeleton";
 import { useFinishWorkout } from "./useFinishWorkout";
-import { Dumbbell, Plus, Trophy } from "lucide-react";
+import { Barbell, Plus, Trophy } from "@phosphor-icons/react";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
-import { loadPersonalBests } from "@/infrastructure/local/queries";
+import { loadPersonalBests, loadStagnantExercises } from "@/infrastructure/local/queries";
 import { getCatalogExercise, type ExerciseRef } from "@/core/catalog";
 import { countUnloggedExercises, type ExerciseDescriptor } from "@/core/session";
 
@@ -40,6 +43,7 @@ export default function ActiveWorkoutView() {
     const userId = useSyncStore((s) => s.userId);
     const { handleFinish, isSaving, saveError, setSaveError, newPRs } = useFinishWorkout();
     const [prs, setPrs] = useState<Record<string, number>>({});
+    const [stagnant, setStagnant] = useState<ReadonlySet<string>>(new Set());
     const [isRestoring, setIsRestoring] = useState(true);
     const [confirmingFinish, setConfirmingFinish] = useState(false);
     const [tipsKey, setTipsKey] = useState<string | null>(null);
@@ -83,28 +87,42 @@ export default function ActiveWorkoutView() {
         };
     }, [hasSession, userId]);
 
+    // ─── Stagnant exercises from the local logs ───────────────
+
+    useEffect(() => {
+        if (!hasSession || !userId) return;
+        let cancelled = false;
+        loadStagnantExercises(getLocalRepositories(), userId)
+            .then((keys) => {
+                if (!cancelled) setStagnant(keys);
+            })
+            .catch(() => { });
+        return () => {
+            cancelled = true;
+        };
+    }, [hasSession, userId]);
+
     // ─── Loading / empty state ────────────────────────────────
 
     if (!session && isRestoring) {
-        return (
-            <div className="flex items-center justify-center py-32">
-                <span className="h-6 w-6 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
-            </div>
-        );
+        return <WorkoutSkeleton />;
     }
 
     if (!session) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-6">
-                <div className="w-16 h-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-3xl">
-                    <Dumbbell size={28} className="text-zinc-400" />
+            <div className="flex min-h-96 flex-col items-center justify-center gap-4 px-4 text-center">
+                <div className="flex size-16 items-center justify-center rounded-xl border border-surface-border bg-surface-raised">
+                    <Barbell size={32} weight="bold" className="text-text-muted" />
                 </div>
-                <h2 className="text-lg font-bold text-white text-center">
+                <h2 className="title-2 text-text-primary">
                     Sin entrenamiento activo
                 </h2>
-                <p className="text-sm text-zinc-500 text-center max-w-xs">
+                <p className="body-6 max-w-xs text-text-secondary">
                     Seleccioná una rutina desde el calendario para comenzar tu sesión.
                 </p>
+                <Link href="/dashboard" className="btn-primary button-md hover:bg-accent-hover active:scale-98">
+                    Ir al calendario
+                </Link>
             </div>
         );
     }
@@ -142,27 +160,28 @@ export default function ActiveWorkoutView() {
     const nameOf = (key?: string) => session.exercises.find((e) => e.key === key)?.name;
 
     return (
-        <div className="flex flex-col gap-4 pb-28">
+        <div className="flex flex-col gap-4 pb-24">
             {/* Header */}
             <div className="px-4 pt-4">
-                <p className="text-xs font-medium text-emerald-400 uppercase tracking-wider">
+                <p className="caption-3 uppercase tracking-wider text-accent-text">
                     Entrenamiento activo
                 </p>
-                <h1 className="text-2xl font-bold text-white mt-1">
+                <h1 className="heading-5 mt-1 text-text-primary">
                     {routine?.dayName ?? ""}
                 </h1>
-                <p className="text-sm text-zinc-500 mt-0.5">
+                <p className="body-6 text-text-muted">
                     {visible.length} ejercicio{visible.length !== 1 ? "s" : ""}
                 </p>
             </div>
 
             {/* New PR celebration */}
             {newPRs && newPRs.length > 0 && (
-                <div className="mx-4 rounded-xl bg-yellow-900/30 border border-yellow-700/50 px-4 py-3">
-                    <p className="text-sm font-bold text-yellow-300">
-                        <Trophy size={16} className="inline mr-1" /> Nuevo{newPRs.length > 1 ? "s" : ""} Récord Personal!
+                <div role="status" className="mx-4 rounded-xl border border-warning-border bg-warning-soft px-4 py-3">
+                    <p className="body-4 flex items-center gap-2 text-warning-text">
+                        <Trophy size={20} weight="bold" />
+                        {newPRs.length > 1 ? "Nuevos récords personales" : "Nuevo récord personal"}
                     </p>
-                    <p className="text-xs text-yellow-400/80 mt-1">
+                    <p className="caption-5 mt-1 text-text-secondary">
                         {newPRs.join(", ")}
                     </p>
                 </div>
@@ -170,11 +189,12 @@ export default function ActiveWorkoutView() {
 
             {/* Save error */}
             {saveError && (
-                <div className="mx-4 flex items-center gap-3 rounded-xl bg-red-900/30 border border-red-700/50 px-4 py-3">
-                    <span className="text-sm text-red-300 flex-1">{saveError}</span>
+                <div role="alert" className="mx-4 flex items-center gap-3 rounded-xl border border-danger-border bg-danger-soft px-4 py-3">
+                    <span className="body-6 flex-1 text-danger-text">{saveError}</span>
                     <button
+                        type="button"
                         onClick={() => setSaveError(null)}
-                        className="text-xs font-semibold text-red-400 hover:text-red-300 shrink-0"
+                        className="pressable button-sm min-h-12 shrink-0 rounded-lg px-3 py-2 text-danger-text hover:bg-danger-soft"
                     >
                         Cerrar
                     </button>
@@ -189,6 +209,7 @@ export default function ActiveWorkoutView() {
                         exercise={exercise}
                         replacesName={nameOf(exercise.plannedExerciseId)}
                         personalRecord={prs[exercise.ref.id]}
+                        stagnant={stagnant.has(exercise.ref.id)}
                         onCompleteSet={(setNumber) =>
                             dispatch({ type: "completeSetAsPlanned", exerciseKey: exercise.key, setNumber })
                         }
@@ -214,28 +235,23 @@ export default function ActiveWorkoutView() {
                 <button
                     type="button"
                     onClick={() => setPicker({ mode: "add" })}
-                    className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-dashed border-zinc-700 text-sm font-semibold text-zinc-300 hover:bg-zinc-900 active:scale-[0.98]"
+                    className="btn-dashed button-md"
                     aria-label="Agregar ejercicio"
                 >
-                    <Plus size={16} /> Agregar ejercicio
+                    <Plus size={20} weight="bold" /> Agregar ejercicio
                 </button>
             </div>
 
             {/* Finish button (fixed bottom) */}
-            <div className="fixed bottom-0 left-0 right-0 z-30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-zinc-950 via-zinc-950/95 to-transparent">
+            <div className="fixed inset-x-0 bottom-0 z-30 bg-surface-base/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
                 <button
+                    type="button"
                     onClick={requestFinish}
                     disabled={isSaving}
-                    className="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] font-bold text-white text-base transition-all shadow-lg shadow-emerald-900/30 disabled:bg-zinc-700 disabled:text-zinc-400 disabled:cursor-not-allowed disabled:shadow-none"
+                    aria-busy={isSaving}
+                    className="btn-primary w-full button-md"
                 >
-                    {isSaving ? (
-                        <span className="flex items-center justify-center gap-2">
-                            <span className="h-4 w-4 rounded-full border-2 border-zinc-400 border-t-transparent animate-spin" />
-                            Guardando...
-                        </span>
-                    ) : (
-                        "Finalizar Entrenamiento"
-                    )}
+                    {isSaving ? "Guardando…" : "Finalizar entrenamiento"}
                 </button>
             </div>
 
@@ -243,6 +259,7 @@ export default function ActiveWorkoutView() {
                 <TipsSheet
                     exerciseName={tipsExercise.name}
                     tips={tips}
+                    historyHref={historyHref(tipsExercise.ref.id)}
                     onClose={() => setTipsKey(null)}
                 />
             )}

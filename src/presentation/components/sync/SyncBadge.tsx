@@ -5,7 +5,7 @@
  * everything is synced; otherwise says what is going on.
  */
 
-import { CloudOff, RefreshCw, UploadCloud } from "lucide-react";
+import { CloudSlash, ArrowsClockwise, CloudArrowUp } from "@phosphor-icons/react";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 
 export default function SyncBadge() {
@@ -17,24 +17,24 @@ export default function SyncBadge() {
 
     let label: string;
     let icon: React.ReactNode;
-    let tone = "text-zinc-400 bg-zinc-800/60 border-zinc-700/60";
+    let tone = "text-text-secondary bg-surface-raised border-surface-border";
 
     if (status === "syncing") {
         label = "Sincronizando…";
-        icon = <RefreshCw size={12} className="animate-spin" />;
-        tone = "text-emerald-400 bg-emerald-950/40 border-emerald-900/60";
+        icon = <ArrowsClockwise size={16} weight="bold" className="pulse-soft" />;
+        tone = "text-accent-text bg-accent-soft border-accent-border";
     } else if (status === "offline") {
         label = pendingCount > 0 ? `Sin conexión · ${pendingCount} sin sincronizar` : "Sin conexión";
-        icon = <CloudOff size={12} />;
+        icon = <CloudSlash size={16} weight="bold" />;
     } else {
         label = `${pendingCount} sin sincronizar`;
-        icon = <UploadCloud size={12} />;
+        icon = <CloudArrowUp size={16} weight="bold" />;
     }
 
     return (
         <span
             role="status"
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${tone}`}
+            className={`caption-4 inline-flex items-center gap-2 rounded-full border px-2 py-1 ${tone}`}
         >
             {icon}
             {label}

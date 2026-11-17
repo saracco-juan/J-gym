@@ -7,7 +7,7 @@ import {
 } from "../index";
 import { DEFAULT_ROUTINES } from "../../constants/defaultRoutines";
 
-const MUSCLE_GROUPS = ["chest", "back", "legs", "glutes", "shoulders", "arms", "core"];
+const MUSCLE_GROUPS = ["chest", "back", "legs", "glutes", "shoulders", "arms", "core", "cardio"];
 
 describe("catalog integrity", () => {
     it("ships about 40 exercises", () => {
@@ -53,6 +53,25 @@ describe("catalog integrity", () => {
             expect(getCatalogExercise(id)?.isBodyweight).toBe(true);
         }
         expect(getCatalogExercise("bench-press")?.isBodyweight).toBe(false);
+    });
+});
+
+describe("stage 2 seed exercises", () => {
+    it("adds the cable lateral raise as a shoulder isolation", () => {
+        expect(getCatalogExercise("cable-lateral-raise")).toMatchObject({
+            nameEs: "Vuelo lateral con polea",
+            muscleGroup: "shoulders",
+            type: "isolation",
+            isBodyweight: false,
+        });
+    });
+
+    it("adds cardio as a bodyweight entry so one tap logs it without weight", () => {
+        expect(getCatalogExercise("cardio")).toMatchObject({
+            nameEs: "Cardio",
+            muscleGroup: "cardio",
+            isBodyweight: true,
+        });
     });
 });
 

@@ -8,7 +8,7 @@
 
 import { useEffect } from "react";
 
-const ROUTES = ["/dashboard", "/workout", "/onboarding"];
+const ROUTES = ["/dashboard", "/workout", "/onboarding", "/history", "/routine", "/profile", "/leaderboard"];
 
 async function warmRoute(path: string) {
     // The service worker stores both flavours: HTML (hard load) and RSC

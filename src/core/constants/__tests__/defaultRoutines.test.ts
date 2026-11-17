@@ -43,6 +43,61 @@ describe("DEFAULT_ROUTINES catalog", () => {
     });
 });
 
+describe("gym routine content", () => {
+    const gym = DEFAULT_ROUTINES.find((r) => r.id === "gym")!;
+    const summarize = (label: string) =>
+        gym.days
+            .find((d) => d.label === label)!
+            .exercises.map((e) => [e.catalogId, e.sets, e.reps, e.weight]);
+
+    it("has exactly four days in the expected order", () => {
+        expect(gym.days.map((d) => d.label)).toEqual([
+            "Cardio",
+            "Piernas",
+            "Pecho / Hombros",
+            "Espalda / Hombros",
+        ]);
+    });
+
+    it("starts with a single 1x1 cardio entry", () => {
+        expect(summarize("Cardio")).toEqual([["cardio", 1, 1, 0]]);
+    });
+
+    it("defines the legs day", () => {
+        expect(summarize("Piernas")).toEqual([
+            ["back-squat", 3, 8, 0],
+            ["leg-extension", 3, 10, 0],
+            ["leg-curl", 3, 10, 0],
+            ["calf-raise", 3, 15, 0],
+            ["leg-press", 3, 8, 0],
+        ]);
+    });
+
+    it("defines the chest / shoulders day as 4x10", () => {
+        expect(summarize("Pecho / Hombros")).toEqual([
+            ["bench-press", 4, 10, 0],
+            ["incline-bench-press", 4, 10, 0],
+            ["dumbbell-fly", 4, 10, 0],
+            ["machine-shoulder-press", 4, 10, 0],
+            ["cable-lateral-raise", 4, 10, 0],
+        ]);
+    });
+
+    it("defines the back / shoulders day as 4x8", () => {
+        expect(summarize("Espalda / Hombros")).toEqual([
+            ["lat-pulldown", 4, 8, 0],
+            ["seated-cable-row", 4, 8, 0],
+            ["rear-delt-fly", 4, 8, 0],
+            ["dumbbell-shoulder-press", 4, 8, 0],
+            ["lateral-raise", 4, 8, 0],
+        ]);
+    });
+
+    it("never prefills a weight: each user enters their own", () => {
+        gym.days.forEach((d) => d.exercises.forEach((e) => expect(e.weight).toBe(0)));
+    });
+});
+
 describe("mapDefaultRoutineToDays", () => {
     const routine = DEFAULT_ROUTINES[0];
 
@@ -59,12 +114,22 @@ describe("mapDefaultRoutineToDays", () => {
         expect(mapped[routine.days.length].dayLabel).toBe(routine.days[0].label);
     });
 
-    it("returns every seed exercise by name, with empty sets for seeds", () => {
+    it("returns every seed exercise by name, with its target sets expanded", () => {
         const [first] = mapDefaultRoutineToDays(["lunes"]);
         expect(first.exercises.map((e) => e.exercise.name)).toEqual(
             routine.days[0].exercises.map((e) => e.name)
         );
-        first.exercises.forEach((e) => expect(e.sets).toEqual([]));
+        first.exercises.forEach((e, i) => {
+            const seed = routine.days[0].exercises[i];
+            expect(e.sets).toHaveLength(seed.sets);
+            e.sets.forEach((set, n) =>
+                expect(set).toEqual({
+                    setNumber: n + 1,
+                    targetReps: seed.reps,
+                    targetWeight: 0,
+                })
+            );
+        });
     });
 
     it("attaches a catalog reference to every seed exercise", () => {

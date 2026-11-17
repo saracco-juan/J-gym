@@ -8,14 +8,14 @@ export interface UserDisplayInput {
 export interface UserDisplay {
     name: string;
     email: string;
-    isDemo: boolean;
+    isAnonymous: boolean;
 }
 
-/** Anonymous (demo) users have no email, so they get a fixed label. */
+/** Anonymous users have no email, so they get a fixed label. */
 export function getUserDisplay(input: UserDisplayInput): UserDisplay {
     if (input.isAnonymous) {
-        return { name: "Usuario demo", email: "", isDemo: true };
+        return { name: "Cuenta sin email", email: "", isAnonymous: true };
     }
     const email = input.email ?? "";
-    return { name: input.fullName || email, email, isDemo: false };
+    return { name: input.fullName || email, email, isAnonymous: false };
 }

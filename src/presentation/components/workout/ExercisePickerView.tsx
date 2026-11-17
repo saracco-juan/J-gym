@@ -5,7 +5,7 @@
  * Presentational: data and callbacks come from ExercisePicker.
  */
 
-import { Plus, Search } from "lucide-react";
+import { Plus, MagnifyingGlass } from "@phosphor-icons/react";
 import type { MuscleGroup } from "@/core/catalog";
 import { MUSCLE_GROUPS, muscleGroupLabel, type PickerOption } from "@/core/catalog/picker";
 import BottomSheet from "@/presentation/components/ui/BottomSheet";
@@ -25,10 +25,10 @@ interface ExercisePickerViewProps {
 }
 
 function chipClass(active: boolean): string {
-    return `h-11 shrink-0 rounded-full border px-4 text-sm font-medium transition-colors ${
+    return `pressable body-5 h-12 shrink-0 rounded-full border px-4 ${
         active
-            ? "border-emerald-500 bg-emerald-500/15 text-emerald-300"
-            : "border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+            ? "border-accent-hover bg-accent-soft text-accent-text"
+            : "border-surface-border text-text-secondary hover:bg-surface-strong"
     }`;
 }
 
@@ -49,9 +49,10 @@ export default function ExercisePickerView({
             {children ?? (
                 <>
                     <div className="relative">
-                        <Search
-                            size={18}
-                            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
+                        <MagnifyingGlass
+                            size={20}
+                            weight="bold"
+                            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
                         />
                         <input
                             type="search"
@@ -59,13 +60,13 @@ export default function ExercisePickerView({
                             onChange={(e) => onQueryChange(e.target.value)}
                             placeholder="Buscar ejercicio"
                             autoComplete="off"
-                            className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-800 pl-10 pr-3 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            className="field-with-icon"
                             aria-label="Buscar ejercicio"
                         />
                     </div>
 
                     <div
-                        className="-mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1"
+                        className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1"
                         role="group"
                         aria-label="Filtrar por grupo muscular"
                     >
@@ -93,21 +94,21 @@ export default function ExercisePickerView({
                     <button
                         type="button"
                         onClick={onCreateRequest}
-                        className="mt-3 flex h-12 items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-700 text-sm font-semibold text-emerald-400 hover:bg-emerald-900/20"
+                        className="btn-dashed button-md mt-3"
                     >
-                        <Plus size={16} /> Crear ejercicio
+                        <Plus size={20} weight="bold" /> Crear ejercicio
                     </button>
 
-                    <ul className="mt-3 flex flex-col gap-1.5">
+                    <ul className="mt-3 flex flex-col gap-2">
                         {options.map((option) => (
                             <li key={`${option.ref.source}:${option.ref.id}`}>
                                 <button
                                     type="button"
                                     onClick={() => onSelect(option)}
-                                    className="flex min-h-12 w-full flex-col items-start justify-center rounded-xl bg-white/5 px-4 py-2 text-left hover:bg-white/10 active:scale-[0.99]"
+                                    className="pressable flex min-h-12 w-full flex-col items-start justify-center rounded-xl border border-surface-border bg-surface-overlay px-4 py-2 text-left hover:bg-surface-strong"
                                 >
-                                    <span className="text-sm font-semibold text-white">{option.name}</span>
-                                    <span className="text-xs text-zinc-500">
+                                    <span className="body-4 text-text-primary">{option.name}</span>
+                                    <span className="caption-5 text-text-muted">
                                         {muscleGroupLabel(option.muscleGroup)}
                                         {option.isBodyweight ? " · Peso corporal" : ""}
                                         {option.ref.source === "custom" ? " · Personalizado" : ""}
@@ -117,9 +118,15 @@ export default function ExercisePickerView({
                         ))}
                     </ul>
                     {options.length === 0 && (
-                        <p className="py-6 text-center text-sm text-zinc-500">
-                            No hay ejercicios que coincidan. Podés crear uno nuevo.
-                        </p>
+                        <div className="flex flex-col items-center gap-3 py-6 text-center">
+                            <div className="flex size-16 items-center justify-center rounded-xl border border-surface-border bg-surface-overlay">
+                                <MagnifyingGlass size={32} weight="bold" className="text-text-muted" />
+                            </div>
+                            <h3 className="title-3 text-text-primary">Sin resultados</h3>
+                            <p className="body-6 max-w-xs text-text-secondary">
+                                No hay ejercicios que coincidan. Podés crear uno nuevo.
+                            </p>
+                        </div>
                     )}
                 </>
             )}

@@ -8,8 +8,8 @@
  * it when already logged); tapping the values opens the inline editor.
  */
 
-import { Check } from "lucide-react";
-import { formatSetValue } from "@/core/session";
+import { Check } from "@phosphor-icons/react";
+import { formatSetTarget, formatSetValue } from "@/core/session";
 
 interface SetRowProps {
     setNumber: number;
@@ -32,47 +32,51 @@ export default function SetRow({
 }: SetRowProps) {
     const hasTarget = targetReps > 0 && (isBodyweight || targetWeight > 0);
     const targetText = hasTarget ? formatSetValue(targetReps, targetWeight, isBodyweight) : null;
+    // Partial target (reps without weight yet) is shown but cannot be logged in one tap.
+    const plannedText = formatSetTarget(targetReps, targetWeight, isBodyweight);
     const loggedText = logged ? formatSetValue(logged.reps, logged.weight, isBodyweight) : null;
     const differs = logged !== null && targetText !== null && loggedText !== targetText;
 
     return (
         <div
-            className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 transition-colors ${
+            className={`interactive flex items-center gap-2 rounded-xl border p-1 pl-3 ${
                 logged
-                    ? "border-emerald-700/50 bg-emerald-900/30"
-                    : "border-white/10 bg-white/5"
+                    ? "border-accent-border bg-accent-soft"
+                    : "border-surface-border bg-surface-overlay"
             }`}
         >
-            <span className="w-6 shrink-0 text-xs font-bold text-zinc-500">S{setNumber}</span>
+            <span className="caption-3 w-6 shrink-0 text-text-muted">S{setNumber}</span>
 
             <button
                 type="button"
                 onClick={onEdit}
-                className="flex min-h-12 min-w-0 flex-1 flex-col items-start justify-center text-left"
+                className="interactive flex min-h-12 min-w-0 flex-1 flex-col items-start justify-center rounded-lg text-left hover:bg-surface-strong"
                 aria-label={`Editar serie ${setNumber}`}
             >
                 <span
-                    className={`text-base font-semibold ${
-                        logged ? "text-emerald-200" : hasTarget ? "text-white" : "text-zinc-400"
+                    className={`body-1 font-mono ${
+                        logged ? "text-accent-text" : hasTarget ? "text-text-primary" : "text-text-muted"
                     }`}
                 >
-                    {loggedText ?? targetText ?? "Sin objetivo"}
+                    {loggedText ?? plannedText ?? "Sin objetivo"}
                 </span>
                 {differs && targetText && (
-                    <span className="text-xs text-zinc-500">Objetivo {targetText}</span>
+                    <span className="caption-5 text-text-muted">Objetivo {targetText}</span>
                 )}
                 {!logged && !hasTarget && (
-                    <span className="text-xs text-zinc-500">Tocá para ingresar</span>
+                    <span className="caption-5 text-text-muted">
+                        {plannedText ? "Tocá para cargar el peso" : "Tocá para ingresar"}
+                    </span>
                 )}
             </button>
 
             <button
                 type="button"
                 onClick={onToggle}
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-all active:scale-95 ${
+                className={`pressable flex size-12 shrink-0 items-center justify-center rounded-lg ${
                     logged
-                        ? "bg-emerald-600 text-white hover:bg-emerald-500"
-                        : "border border-zinc-600 bg-zinc-800 text-zinc-300 hover:border-emerald-500 hover:text-emerald-400"
+                        ? "bg-accent text-text-primary hover:bg-accent-hover"
+                        : "border border-surface-border bg-surface-strong text-text-secondary hover:border-accent-hover hover:text-accent-text"
                 }`}
                 aria-label={
                     logged
@@ -81,7 +85,7 @@ export default function SetRow({
                 }
                 aria-pressed={logged !== null}
             >
-                <Check size={22} strokeWidth={3} />
+                <Check size={24} weight="bold" />
             </button>
         </div>
     );

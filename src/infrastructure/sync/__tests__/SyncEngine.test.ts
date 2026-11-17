@@ -1,5 +1,6 @@
 import "fake-indexeddb/auto";
 import type { IRoutineTemplate, IWorkoutLog } from "@/core/domain";
+import { computeUserStats } from "@/core/stats";
 import type { SyncCommand } from "@/core/sync";
 import { JgymDatabase } from "@/infrastructure/local/db";
 import { createLocalRepositories, type LocalRepositories } from "@/infrastructure/local/localRepositories";
@@ -21,6 +22,7 @@ class FakeTransport implements SyncTransport {
     failWith: ((c: SyncCommand) => SyncTransportError | null) | null = null;
     gate: Promise<void> | null = null;
     serverRoutines: unknown[] = [];
+    serverProfile: unknown | null = null;
 
     async execute(command: SyncCommand): Promise<void> {
         if (this.gate) await this.gate;
@@ -36,6 +38,9 @@ class FakeTransport implements SyncTransport {
     }
     async fetchLogsSince(): Promise<unknown[]> {
         return [];
+    }
+    async fetchProfile(): Promise<unknown | null> {
+        return this.serverProfile;
     }
 }
 
@@ -254,6 +259,47 @@ describe("conflicts", () => {
     });
 });
 
+describe("profile name conflicts", () => {
+    const profile = { userId: "u1", displayName: "Juan", avatarColor: "#2563eb" };
+    const rejectProfile = (c: SyncCommand) =>
+        c.kind === "upsert" && c.table === "profiles"
+            ? new SyncTransportError("duplicate key value", 409, "23505")
+            : null;
+
+    it("drops a profile rejected for a taken name and remembers why, without retrying", async () => {
+        await repos.profiles.save(profile);
+        transport.failWith = rejectProfile;
+        await engine.flush();
+
+        expect(await repos.outbox.count()).toBe(0);
+        expect(await repos.profiles.getRejection("u1")).toEqual({
+            displayName: "Juan",
+            reason: "name-taken",
+        });
+        expect(await repos.profiles.get("u1")).toEqual(profile);
+        expect(engine.getState().status).toBe("idle");
+    });
+
+    it("keeps sending the rest of the queue after a rejected profile", async () => {
+        await repos.profiles.save(profile);
+        await repos.routines.save(routine);
+        transport.failWith = rejectProfile;
+        await engine.flush();
+
+        expect(transport.commands.map((c) => c.table)).toEqual(["routine_templates"]);
+        expect(await repos.outbox.count()).toBe(0);
+    });
+
+    it("sends a valid profile and leaves no rejection", async () => {
+        await repos.profiles.save(profile);
+        await engine.flush();
+        expect(transport.commands).toEqual([
+            expect.objectContaining({ table: "profiles", onConflict: "user_id" }),
+        ]);
+        expect(await repos.profiles.getRejection("u1")).toBeUndefined();
+    });
+});
+
 describe("triggers", () => {
     it("debounces flushes after local writes", async () => {
         engine.notifyLocalWrite();
@@ -324,6 +370,51 @@ describe("initial pull hook", () => {
             },
         });
         await engine.flush();
+        expect(engine.getState().status).toBe("offline");
+    });
+});
+
+describe("public stats", () => {
+    const stats = computeUserStats({ templates: [], logs: [], today: "2026-11-17" });
+    const rejectStats = (status: number, code?: string) => (c: SyncCommand) =>
+        c.kind === "upsert" && c.table === "public_stats"
+            ? new SyncTransportError("new row violates row-level security policy", status, code)
+            : null;
+
+    it("sends the snapshot after the profile", async () => {
+        await repos.stats.publish("u1", "2026-11-17", stats);
+        await repos.profiles.save({ userId: "u1", displayName: "Juan", avatarColor: "#2563eb" });
+        await engine.flush();
+
+        expect(transport.commands.map((c) => c.table)).toEqual(["profiles", "public_stats"]);
+        expect(transport.commands[1]).toMatchObject({ onConflict: "user_id" });
+        expect(await repos.outbox.count()).toBe(0);
+    });
+
+    it("drops a refused snapshot without pausing or retrying", async () => {
+        await repos.stats.publish("u1", "2026-11-17", stats);
+        await repos.routines.save(routine);
+        transport.failWith = rejectStats(403, "42501");
+        await engine.flush();
+
+        expect(await repos.outbox.count()).toBe(0);
+        expect(transport.commands.map((c) => c.table)).toEqual(["routine_templates"]);
+        expect(engine.getState().status).toBe("idle");
+    });
+
+    it("drops a snapshot when the table is missing, so a pending migration never loops", async () => {
+        await repos.stats.publish("u1", "2026-11-17", stats);
+        transport.failWith = rejectStats(404, "PGRST205");
+        await engine.flush();
+        expect(await repos.outbox.count()).toBe(0);
+        expect(engine.getState().status).toBe("idle");
+    });
+
+    it("keeps the snapshot while the device cannot reach the server", async () => {
+        await repos.stats.publish("u1", "2026-11-17", stats);
+        transport.failWith = () => new SyncTransportError("Failed to fetch", 0);
+        await engine.flush();
+        expect(await repos.outbox.count()).toBe(1);
         expect(engine.getState().status).toBe("offline");
     });
 });

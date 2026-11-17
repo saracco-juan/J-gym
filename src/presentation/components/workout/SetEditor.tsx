@@ -19,8 +19,7 @@ interface SetEditorProps {
     onCancel: () => void;
 }
 
-const INPUT_CLASS =
-    "h-12 w-full rounded-xl bg-zinc-800 border border-zinc-700 px-3 text-center text-base font-semibold text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent";
+const INPUT_CLASS = "field text-center";
 
 export default function SetEditor({
     setNumber,
@@ -50,12 +49,12 @@ export default function SetEditor({
     return (
         <form
             onSubmit={handleSubmit}
-            className="flex flex-col gap-3 rounded-xl border border-emerald-700/60 bg-zinc-950/60 p-3"
+            className="flex flex-col gap-3 rounded-xl border border-accent-border bg-surface-base p-3"
             aria-label={`Editar serie ${setNumber}`}
         >
             <div className="flex items-end gap-3">
-                <span className="pb-3 text-xs font-bold text-zinc-500">S{setNumber}</span>
-                <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium text-zinc-400">
+                <span className="caption-3 pb-4 text-text-muted">S{setNumber}</span>
+                <label className="caption-4 flex min-w-0 flex-1 flex-col gap-1 text-text-secondary">
                     Reps
                     <input
                         type="text"
@@ -69,7 +68,7 @@ export default function SetEditor({
                         aria-label={`Repeticiones serie ${setNumber}`}
                     />
                 </label>
-                <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium text-zinc-400">
+                <label className="caption-4 flex min-w-0 flex-1 flex-col gap-1 text-text-secondary">
                     {weightLabel}
                     <input
                         type="text"
@@ -86,7 +85,7 @@ export default function SetEditor({
             </div>
 
             {hasError && (
-                <p role="alert" className="text-xs text-red-400">
+                <p role="alert" className="caption-5 text-danger-text">
                     {isBodyweight
                         ? "Ingresá repeticiones válidas. El lastre es opcional."
                         : "Ingresá repeticiones y peso válidos."}
@@ -97,14 +96,14 @@ export default function SetEditor({
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="h-12 flex-1 rounded-xl border border-zinc-700 text-sm font-semibold text-zinc-300 active:scale-[0.98]"
+                    className="btn-secondary button-sm flex-1"
                     aria-label={`Cancelar edición de la serie ${setNumber}`}
                 >
                     Cancelar
                 </button>
                 <button
                     type="submit"
-                    className="h-12 flex-[2] rounded-xl bg-emerald-600 text-sm font-bold text-white active:scale-[0.98] hover:bg-emerald-500"
+                    className="btn-primary button-sm flex-2"
                     aria-label={`Guardar serie ${setNumber}`}
                 >
                     Guardar serie

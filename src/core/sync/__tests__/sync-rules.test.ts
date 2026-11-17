@@ -1,6 +1,6 @@
 import type { IRoutineTemplate, IWorkoutLog } from "@/core/domain";
 import { coalesceEntry, type OutboxEntry } from "../outbox";
-import { classifySyncError } from "../classify-error";
+import { classifySyncError, shouldDropFailedEntry } from "../classify-error";
 import { detachTemplate, toSyncCommand } from "../commands";
 import { planFlush } from "../flush-plan";
 import { decideInitialPull, planRoutineRekeys } from "../adoption";
@@ -163,6 +163,41 @@ describe("toSyncCommand", () => {
     });
 });
 
+describe("profile commands", () => {
+    const profile = { userId: "stale", displayName: "Juan", avatarColor: "#2563eb" };
+
+    it("upserts the profile keyed by user_id, owned by the session user", () => {
+        const cmd = toSyncCommand(
+            entry({ entity: "profile", entityId: "u1", op: "upsert", payload: profile }),
+            "u1",
+            "x"
+        );
+        expect(cmd).toEqual({
+            kind: "upsert",
+            table: "profiles",
+            onConflict: "user_id",
+            row: { user_id: "u1", display_name: "Juan", avatar_color: "#2563eb" },
+        });
+    });
+
+    it("never deletes a profile", () => {
+        expect(() =>
+            toSyncCommand(entry({ entity: "profile", entityId: "u1", op: "delete" }), "u1", "x")
+        ).toThrow(/never deleted/);
+    });
+
+    it("holds back a profile that belongs to another user", () => {
+        const other = entry({
+            entity: "profile",
+            entityId: "u9",
+            op: "upsert",
+            payload: { ...profile, userId: "u9" },
+        });
+        const plan = planFlush({ entries: [other], now: 1000, userId: "u1" });
+        expect(plan).toEqual({ kind: "send", batch: [] });
+    });
+});
+
 describe("detachTemplate", () => {
     it("nulls the template of a log upsert and refuses anything else", () => {
         const logCmd = toSyncCommand(entry({ entity: "workoutLog", entityId: "l1", op: "upsert", payload: log }), "u1", "x");
@@ -216,5 +251,74 @@ describe("canClearLocalData", () => {
     it("only allows clearing when nothing is pending", () => {
         expect(canClearLocalData(0)).toBe(true);
         expect(canClearLocalData(2)).toBe(false);
+    });
+});
+
+describe("stats commands", () => {
+    const stats = {
+        streak: 3,
+        bestStreak: 5,
+        xp: 120,
+        level: 2,
+        xpIntoLevel: 20,
+        xpForNextLevel: 200,
+        bestLifts: { "back-squat": null, "bench-press": null, "lat-pulldown": null },
+        status: "steady",
+        weeklyVolumeKg: 800,
+        weekStart: "2026-11-16",
+        monthlyProgressPct: 0,
+        monthStart: "2026-11-01",
+        workoutsCount: 4,
+        achievements: [],
+    };
+
+    it("upserts the snapshot keyed by user_id, owned by the session user", () => {
+        const cmd = toSyncCommand(
+            entry({ entity: "stats", entityId: "u1", op: "upsert", payload: { userId: "stale", stats } }),
+            "u1",
+            "x"
+        );
+        expect(cmd).toMatchObject({
+            kind: "upsert",
+            table: "public_stats",
+            onConflict: "user_id",
+            row: { user_id: "u1", streak: 3, xp: 120, week_start: "2026-11-16", month: "2026-11-01" },
+        });
+    });
+
+    it("never deletes a snapshot", () => {
+        expect(() =>
+            toSyncCommand(entry({ entity: "stats", entityId: "u1", op: "delete" }), "u1", "x")
+        ).toThrow(/never deleted/);
+    });
+
+    it("holds back a snapshot that belongs to another user", () => {
+        const other = entry({
+            entity: "stats",
+            entityId: "u9",
+            op: "upsert",
+            payload: { userId: "u9", stats },
+        });
+        expect(planFlush({ entries: [other], now: 1000, userId: "u1" })).toEqual({
+            kind: "send",
+            batch: [],
+        });
+    });
+});
+
+describe("shouldDropFailedEntry", () => {
+    it("drops a failed stats snapshot unless the device is offline", () => {
+        expect(shouldDropFailedEntry("stats", "auth")).toBe(true);
+        expect(shouldDropFailedEntry("stats", "retry")).toBe(true);
+        expect(shouldDropFailedEntry("stats", "missing-parent")).toBe(true);
+        expect(shouldDropFailedEntry("stats", "unique-conflict")).toBe(true);
+        expect(shouldDropFailedEntry("stats", "network")).toBe(false);
+    });
+
+    it("never drops anything else", () => {
+        for (const entity of ["routine", "customExercise", "workoutLog", "profile"] as const) {
+            expect(shouldDropFailedEntry(entity, "auth")).toBe(false);
+            expect(shouldDropFailedEntry(entity, "retry")).toBe(false);
+        }
     });
 });

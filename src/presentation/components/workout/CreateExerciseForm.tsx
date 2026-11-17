@@ -55,7 +55,7 @@ export default function CreateExerciseForm({
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 pb-2" aria-label="Crear ejercicio">
-            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-300">
+            <label className="body-5 flex flex-col gap-1 text-text-secondary">
                 Nombre
                 <input
                     type="text"
@@ -63,22 +63,22 @@ export default function CreateExerciseForm({
                     autoComplete="off"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="h-12 rounded-xl border border-zinc-700 bg-zinc-800 px-3 text-base text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="field"
                     aria-invalid={nameError !== null}
                 />
                 {nameError && (
-                    <span role="alert" className="text-xs text-red-400">
+                    <span role="alert" className="caption-5 text-danger-text">
                         {nameError}
                     </span>
                 )}
             </label>
 
-            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-300">
+            <label className="body-5 flex flex-col gap-1 text-text-secondary">
                 Grupo muscular
                 <select
                     value={muscleGroup}
                     onChange={(e) => setMuscleGroup(e.target.value as MuscleGroup)}
-                    className="h-12 rounded-xl border border-zinc-700 bg-zinc-800 px-3 text-base text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="field"
                 >
                     {MUSCLE_GROUPS.map((g) => (
                         <option key={g} value={g}>
@@ -88,18 +88,18 @@ export default function CreateExerciseForm({
                 </select>
             </label>
 
-            <label className="flex min-h-11 items-center gap-3 text-sm text-zinc-300">
+            <label className="body-5 flex min-h-12 items-center gap-3 text-text-secondary">
                 <input
                     type="checkbox"
                     checked={isBodyweight}
                     onChange={(e) => setIsBodyweight(e.target.checked)}
-                    className="h-5 w-5 accent-emerald-500"
+                    className="size-6 accent-accent-hover"
                 />
                 Con peso corporal (el lastre es opcional)
             </label>
 
             {saveError && (
-                <p role="alert" className="text-xs text-red-400">
+                <p role="alert" className="caption-5 text-danger-text">
                     {saveError}
                 </p>
             )}
@@ -108,16 +108,17 @@ export default function CreateExerciseForm({
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="h-12 flex-1 rounded-xl border border-zinc-700 text-sm font-semibold text-zinc-300 hover:bg-zinc-800"
+                    className="btn-secondary button-sm flex-1"
                 >
                     Cancelar
                 </button>
                 <button
                     type="submit"
                     disabled={isSaving}
-                    className="h-12 flex-[2] rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-500 disabled:bg-zinc-700 disabled:text-zinc-400"
+                    aria-busy={isSaving}
+                    className="btn-primary button-sm flex-2"
                 >
-                    {isSaving ? "Guardando..." : "Crear y elegir"}
+                    {isSaving ? "Guardando…" : "Crear y elegir"}
                 </button>
             </div>
         </form>

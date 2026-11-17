@@ -29,12 +29,26 @@ export function formatSetValue(reps: number, weight: number, isBodyweight: boole
     return `${reps} × ${formatLoad(weight, isBodyweight)}`;
 }
 
-/** Exercise scheme from the first planned set, e.g. "4×8 · 20kg". */
+/**
+ * Planned target of one set, e.g. "8 × 20kg". A weighted lift without a
+ * target weight yet (fresh seed routine) shows only its reps, "8 reps".
+ * Null when there are no target reps.
+ */
+export function formatSetTarget(reps: number, weight: number, isBodyweight: boolean): string | null {
+    if (reps <= 0) return null;
+    if (!isBodyweight && weight <= 0) return `${reps} reps`;
+    return formatSetValue(reps, weight, isBodyweight);
+}
+
+/** Exercise scheme from the first planned set, e.g. "4×8 · 20kg" or "3×8" without a target weight. */
 export function formatExerciseScheme(exercise: SessionExercise): string {
     const planned = exercise.sets.filter((s) => s.planned);
     if (planned.length === 0) return "Sin series";
     const first = planned[0];
     if (first.targetReps <= 0 && first.targetWeight <= 0) return "Sin objetivo";
+    if (!exercise.isBodyweight && first.targetWeight <= 0) {
+        return `${planned.length}×${first.targetReps}`;
+    }
     const load = exercise.isBodyweight
         ? first.targetWeight > 0
             ? `${formatLoad(first.targetWeight, true)} lastre`

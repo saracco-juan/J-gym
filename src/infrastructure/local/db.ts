@@ -9,7 +9,7 @@
 
 import Dexie, { type EntityTable } from "dexie";
 import type { CustomExercise } from "@/core/catalog";
-import type { IRoutineTemplate, IWorkoutLog } from "@/core/domain";
+import type { IProfile, IRoutineTemplate, IWorkoutLog } from "@/core/domain";
 import type { SessionState } from "@/core/session";
 import type { OutboxEntry } from "@/core/sync";
 
@@ -42,6 +42,16 @@ export interface MetaRecord {
     value: unknown;
 }
 
+/**
+ * Why the server refused the pending profile write. Kept in `meta` so the UI
+ * can explain it; cleared the next time the profile is saved.
+ */
+export interface ProfileRejection {
+    /** The name that was refused, to ignore the notice once it changes. */
+    displayName: string;
+    reason: "name-taken";
+}
+
 export class JgymDatabase extends Dexie {
     routines!: EntityTable<IRoutineTemplate, "id">;
     customExercises!: EntityTable<StoredCustomExercise, "id">;
@@ -49,6 +59,7 @@ export class JgymDatabase extends Dexie {
     activeSession!: EntityTable<ActiveSessionRecord, "key">;
     meta!: EntityTable<MetaRecord, "key">;
     outbox!: EntityTable<OutboxEntry, "id">;
+    profiles!: EntityTable<IProfile, "userId">;
 
     constructor(name = "jgym") {
         super(name);
@@ -59,6 +70,10 @@ export class JgymDatabase extends Dexie {
             activeSession: "key",
             meta: "key",
             outbox: "id, [entity+entityId], nextAttemptAt",
+        });
+        // v2: the own profile (display name and avatar color), one row per user.
+        this.version(2).stores({
+            profiles: "userId",
         });
     }
 }

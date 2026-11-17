@@ -11,7 +11,8 @@ export type MuscleGroup =
     | "glutes"
     | "shoulders"
     | "arms"
-    | "core";
+    | "core"
+    | "cardio";
 
 export type ExerciseType = "compound" | "isolation";
 
