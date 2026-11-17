@@ -20,10 +20,6 @@ import {
     type SessionExercise,
     type SessionSet,
 } from "@/core/session";
-import {
-    formatStagnationSuggestion,
-    suggestStagnationAction,
-} from "@/core/progress";
 import { historyHref } from "@/presentation/components/history/historyHref";
 import StagnationNotice from "@/presentation/components/ui/StagnationNotice";
 import ExerciseStatusBadge from "./ExerciseStatusBadge";
@@ -122,17 +118,6 @@ export default function ExerciseCard({
 
     const extraSetNumber = sets.length + 1;
 
-    const stagnationText = (() => {
-        if (!stagnant) return null;
-        const first = sets.find((s) => s.planned);
-        const suggestion = suggestStagnationAction({
-            weight: first?.targetWeight ?? 0,
-            reps: first?.targetReps ?? 0,
-            isBodyweight,
-        });
-        return suggestion ? formatStagnationSuggestion(suggestion) : null;
-    })();
-
     return (
         <section
             className="overflow-hidden rounded-2xl border border-surface-border bg-surface-raised"
@@ -157,7 +142,7 @@ export default function ExerciseCard({
                     </div>
                     {stagnant && (
                         <div className="mt-2">
-                            <StagnationNotice suggestion={stagnationText} />
+                            <StagnationNotice />
                         </div>
                     )}
                 </div>

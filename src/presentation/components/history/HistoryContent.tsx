@@ -6,11 +6,7 @@
  */
 
 import { ChartLineUp, Trophy } from "@phosphor-icons/react";
-import {
-    formatStagnationSuggestion,
-    suggestStagnationAction,
-    type ExerciseSession,
-} from "@/core/progress";
+import type { ExerciseSession } from "@/core/progress";
 import { exerciseStatusLabel, formatSetValue, formatWeight } from "@/core/session";
 import type { ExerciseHistoryResult } from "@/infrastructure/local/queries";
 import StagnationNotice from "@/presentation/components/ui/StagnationNotice";
@@ -24,18 +20,6 @@ function formatDate(date: string): string {
         month: "short",
         year: "numeric",
     });
-}
-
-/** Suggestion from the most recent session that logged a set. */
-function stagnationText(history: ExerciseHistoryResult): string | null {
-    const latest = [...history.sessions].reverse().find((s) => s.bestWeight > 0 || s.bestReps > 0);
-    if (!latest) return null;
-    const suggestion = suggestStagnationAction({
-        weight: latest.bestWeight,
-        reps: latest.bestReps,
-        isBodyweight: history.isBodyweight,
-    });
-    return suggestion ? formatStagnationSuggestion(suggestion) : null;
 }
 
 function bestSetText(session: ExerciseSession, isBodyweight: boolean): string {
@@ -63,7 +47,7 @@ export default function HistoryContent({ history }: { history: ExerciseHistoryRe
 
     return (
         <div className="flex flex-col gap-4">
-            {history.stagnant && <StagnationNotice suggestion={stagnationText(history)} />}
+            {history.stagnant && <StagnationNotice />}
 
             <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-surface-border bg-surface-raised px-4 py-3">

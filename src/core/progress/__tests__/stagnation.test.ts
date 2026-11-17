@@ -3,10 +3,9 @@ import type { ExerciseSession } from "../history";
 import {
     STAGNATION_SESSIONS,
     findStagnantExercises,
-    formatStagnationSuggestion,
+    STAGNATION_MESSAGE,
     isExerciseStagnant,
     isStagnantHistory,
-    suggestStagnationAction,
 } from "../stagnation";
 
 function entry(
@@ -174,84 +173,12 @@ describe("isExerciseStagnant", () => {
     });
 });
 
-describe("suggestStagnationAction", () => {
-    it("lowers the weight about 10% rounded to 2.5 kg", () => {
-        expect(suggestStagnationAction({ weight: 60, reps: 8, isBodyweight: false })).toEqual({
-            kind: "lower-weight",
-            from: 60,
-            to: 55,
-        });
-        expect(suggestStagnationAction({ weight: 100, reps: 5, isBodyweight: false })).toEqual({
-            kind: "lower-weight",
-            from: 100,
-            to: 90,
-        });
-    });
-
-    it("always lowers by at least one step", () => {
-        expect(suggestStagnationAction({ weight: 5, reps: 8, isBodyweight: false })).toEqual({
-            kind: "lower-weight",
-            from: 5,
-            to: 2.5,
-        });
-        expect(suggestStagnationAction({ weight: 20, reps: 8, isBodyweight: false })).toEqual({
-            kind: "lower-weight",
-            from: 20,
-            to: 17.5,
-        });
-    });
-
-    it("suggests fewer reps for bodyweight work without extra load", () => {
-        expect(suggestStagnationAction({ weight: 0, reps: 10, isBodyweight: true })).toEqual({
-            kind: "fewer-reps",
-            from: 10,
-            to: 8,
-        });
-    });
-
-    it("suggests fewer reps when there is no weight to lower", () => {
-        expect(suggestStagnationAction({ weight: 0, reps: 8, isBodyweight: false })).toEqual({
-            kind: "fewer-reps",
-            from: 8,
-            to: 6,
-        });
-        expect(suggestStagnationAction({ weight: 2.5, reps: 8, isBodyweight: false })).toEqual({
-            kind: "fewer-reps",
-            from: 8,
-            to: 6,
-        });
-    });
-
-    it("never goes below one rep and returns null when nothing can be lowered", () => {
-        expect(suggestStagnationAction({ weight: 0, reps: 2, isBodyweight: true })).toEqual({
-            kind: "fewer-reps",
-            from: 2,
-            to: 1,
-        });
-        expect(suggestStagnationAction({ weight: 0, reps: 1, isBodyweight: true })).toBeNull();
-        expect(suggestStagnationAction({ weight: 0, reps: 0, isBodyweight: true })).toBeNull();
-    });
-
-    it("lowers extra load when a bodyweight exercise carries weight", () => {
-        expect(suggestStagnationAction({ weight: 20, reps: 8, isBodyweight: true })).toEqual({
-            kind: "lower-weight",
-            from: 20,
-            to: 17.5,
-        });
-    });
-});
-
-describe("formatStagnationSuggestion", () => {
-    it("words a weight suggestion in Spanish", () => {
-        expect(formatStagnationSuggestion({ kind: "lower-weight", from: 60, to: 55 })).toBe(
-            "Prueba bajar de 60kg a 55kg para recuperar el ritmo."
-        );
-    });
-
-    it("words a reps suggestion in Spanish", () => {
-        expect(formatStagnationSuggestion({ kind: "fewer-reps", from: 10, to: 8 })).toBe(
-            "Prueba bajar de 10 a 8 repeticiones para recuperar el ritmo."
-        );
+describe("STAGNATION_MESSAGE", () => {
+    // AGENTS.md rule 1: weight changes are always manual, so the notice
+    // never proposes kilos or a new target.
+    it("states the stagnation without suggesting a weight", () => {
+        expect(STAGNATION_MESSAGE).toContain(`${STAGNATION_SESSIONS} sesiones`);
+        expect(STAGNATION_MESSAGE).not.toMatch(/kg|\d+\s*kilos?/i);
     });
 });
 

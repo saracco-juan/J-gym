@@ -10,16 +10,11 @@
 
 import Link from "next/link";
 import { ChartLineUp } from "@phosphor-icons/react";
-import { getCatalogExercise, resolveLegacyExerciseName, type ExerciseRef } from "@/core/catalog";
+import type { ExerciseRef } from "@/core/catalog";
 import type { IExercise } from "@/core/domain/exercises";
 import type { IRoutineTemplate } from "@/core/domain/routine-template";
-import type { IWorkoutExercise, IWorkoutLog } from "@/core/domain/workout-log";
-import {
-    exerciseHistoryKey,
-    formatStagnationSuggestion,
-    isExerciseStagnant,
-    suggestStagnationAction,
-} from "@/core/progress";
+import type { IWorkoutLog } from "@/core/domain/workout-log";
+import { exerciseHistoryKey, isExerciseStagnant } from "@/core/progress";
 import { historyHref } from "@/presentation/components/history/historyHref";
 import StagnationNotice from "@/presentation/components/ui/StagnationNotice";
 
@@ -55,32 +50,6 @@ function ExerciseNameLink({ item }: { item: { exercise: IExercise; ref?: Exercis
     );
 }
 
-// ─── Stagnation helpers ────────────────────────────────────────────
-
-function isBodyweightExercise(name: string, ref?: ExerciseRef): boolean {
-    const catalogId = ref ? (ref.source === "catalog" ? ref.id : null) : resolveLegacyExerciseName(name);
-    return catalogId ? (getCatalogExercise(catalogId)?.isBodyweight ?? false) : false;
-}
-
-/** Suggestion text for the stagnation notice, or null when nothing can be lowered. */
-function stagnationText(weight: number, reps: number, isBodyweight: boolean): string | null {
-    const suggestion = suggestStagnationAction({ weight, reps, isBodyweight });
-    return suggestion ? formatStagnationSuggestion(suggestion) : null;
-}
-
-/** The suggestion of a logged exercise starts from its best set. */
-function logStagnationText(we: IWorkoutExercise): string | null {
-    const best = we.sets.reduce<IWorkoutExercise["sets"][number] | null>(
-        (top, s) => (top === null || s.actualWeight > top.actualWeight ? s : top),
-        null
-    );
-    return stagnationText(
-        best?.actualWeight ?? 0,
-        best?.actualReps ?? 0,
-        isBodyweightExercise(we.exercise.name, we.ref)
-    );
-}
-
 // ─── Vista Template (Plan Futuro) ──────────────────────────────────
 
 function TemplateSummary({
@@ -110,13 +79,7 @@ function TemplateSummary({
                             </span>
                             {isExerciseStagnant(stagnant, re) && (
                                 <div className="mt-2">
-                                    <StagnationNotice
-                                        suggestion={stagnationText(
-                                            weight,
-                                            re.sets[0]?.targetReps ?? 0,
-                                            isBodyweightExercise(re.exercise.name, re.ref)
-                                        )}
-                                    />
+                                    <StagnationNotice />
                                 </div>
                             )}
                         </div>
@@ -149,7 +112,7 @@ function LogSummary({ log, stagnant }: { log: IWorkoutLog; stagnant: ReadonlySet
                     <div className="flex flex-col gap-1 p-3">
                         {isExerciseStagnant(stagnant, we) && (
                             <div className="mb-2">
-                                <StagnationNotice suggestion={logStagnationText(we)} />
+                                <StagnationNotice />
                             </div>
                         )}
                         {we.sets.map((s) => (
