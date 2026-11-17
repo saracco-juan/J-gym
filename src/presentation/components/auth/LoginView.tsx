@@ -1,66 +1,66 @@
 "use client";
 
 /**
- * LoginView — Pantalla de login para PWA de gimnasio.
+ * LoginView: sign in with a code sent by email, no password and no link.
  *
- * Dos métodos de acceso:
- * 1. Magic Link por email (sin contraseña)
- * 2. Demo anónima (sin registro)
- *
- * Mobile-first con inputs grandes y estados de carga/éxito/error.
+ * The code is typed inside the app, so it works in the installed PWA (a link
+ * would open the browser instead). Step 1 asks for the email, step 2 for the
+ * code. Mobile-first, with inline specific errors.
  */
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { signInAsDemo } from "@/infrastructure/auth/demoSignIn";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
-import { Barbell, Envelope } from "@phosphor-icons/react";
+import type { AuthErrorKind } from "@/core/auth";
+import { Barbell } from "@phosphor-icons/react";
+import EmailCodeForm from "./EmailCodeForm";
+import { useEmailCodeFlow } from "./useEmailCodeFlow";
 
-// Each action has its own pending state so only the clicked button shows progress.
-type LoginState = "idle" | "sending-link" | "starting-demo" | "success" | "error";
+const SEND_ERRORS: Record<AuthErrorKind, string> = {
+    "invalid-code": "No pudimos enviar el código. Revisá el email e intentá de nuevo.",
+    "rate-limit": "Pediste demasiados códigos. Esperá unos minutos y probá de nuevo.",
+    "email-taken": "No pudimos enviar el código. Revisá el email e intentá de nuevo.",
+    network: "Sin conexión. Revisá tu internet e intentá de nuevo.",
+    unknown: "No pudimos enviar el código. Probá de nuevo en un momento.",
+};
+
+const VERIFY_ERRORS: Record<AuthErrorKind, string> = {
+    "invalid-code": "El código es incorrecto o venció. Revisá tu correo o pedí uno nuevo.",
+    "rate-limit": "Demasiados intentos. Esperá unos minutos y probá de nuevo.",
+    "email-taken": "No pudimos verificar el código. Probá de nuevo.",
+    network: "Sin conexión. Revisá tu internet e intentá de nuevo.",
+    unknown: "No pudimos verificar el código. Probá de nuevo.",
+};
 
 export default function LoginView() {
     const router = useRouter();
-    const [email, setEmail] = useState("");
-    const [state, setState] = useState<LoginState>("idle");
-    const [errorMsg, setErrorMsg] = useState("");
-    const isBusy = state === "sending-link" || state === "starting-demo";
 
-    const handleMagicLink = useCallback(async () => {
-        if (!email.trim()) return;
-        setState("sending-link");
-        setErrorMsg("");
+    const sendCode = useCallback(
+        // No emailRedirectTo: we want a code, not a link that opens the browser.
+        (email: string) =>
+            createSupabaseBrowserClient().auth.signInWithOtp({
+                email,
+                options: { shouldCreateUser: true },
+            }),
+        [],
+    );
 
-        const supabase = createSupabaseBrowserClient();
-        const { error } = await supabase.auth.signInWithOtp({
-            email: email.trim(),
-            options: {
-                emailRedirectTo: `${window.location.origin}/auth/callback`,
-            },
-        });
+    const verifyCode = useCallback(
+        (email: string, token: string) =>
+            createSupabaseBrowserClient().auth.verifyOtp({ email, token, type: "email" }),
+        [],
+    );
 
-        if (error) {
-            setState("error");
-            setErrorMsg(error.message);
-        } else {
-            setState("success");
-        }
-    }, [email]);
+    // The dashboard sends users without routines to onboarding.
+    const onVerified = useCallback(() => router.replace("/dashboard"), [router]);
 
-    const handleDemo = useCallback(async () => {
-        setState("starting-demo");
-        setErrorMsg("");
-
-        const { success } = await signInAsDemo();
-
-        if (success) {
-            // The dashboard sends users without routines to onboarding.
-            router.push("/dashboard");
-        } else {
-            setState("error");
-            setErrorMsg("No pudimos iniciar la demo. Probá de nuevo.");
-        }
-    }, [router]);
+    const flow = useEmailCodeFlow({
+        sendCode,
+        verifyCode,
+        sendErrors: SEND_ERRORS,
+        verifyErrors: VERIFY_ERRORS,
+        onVerified,
+    });
 
     return (
         <div className="flex min-h-dvh flex-col items-center justify-center bg-surface-base px-4">
@@ -75,75 +75,23 @@ export default function LoginView() {
 
             {/* Card */}
             <div className="w-full max-w-sm rounded-2xl border border-surface-border bg-surface-raised p-6">
-                {state === "success" ? (
-                    <div className="flex flex-col items-center gap-3 py-2">
-                        <div className="flex size-16 items-center justify-center rounded-xl bg-accent-soft">
-                            <Envelope size={32} weight="bold" className="text-accent-text" />
-                        </div>
-                        <h2 className="heading-6 text-center text-text-primary">
-                            Revisá tu correo
-                        </h2>
-                        <p className="body-6 text-center text-text-secondary">
-                            Te enviamos un link mágico a{" "}
-                            <span className="body-4 break-all text-text-primary">{email}</span>.
-                            Hacé click para ingresar.
-                        </p>
-                        <button
-                            type="button"
-                            onClick={() => { setState("idle"); setEmail(""); }}
-                            className="btn mt-2 w-full text-accent-text hover:enabled:bg-surface-strong button-md"
-                        >
-                            Usar otro email
-                        </button>
-                    </div>
-                ) : (
+                {flow.step === "email" && (
                     <>
                         <h2 className="heading-6 mb-1 text-text-primary">Iniciar sesión</h2>
                         <p className="body-6 mb-4 text-text-muted">
-                            Accedé con tu email, sin contraseña.
+                            Ingresá con tu email. Te enviamos un código, sin contraseña.
                         </p>
-
-                        {/* Email input */}
-                        <input
-                            type="email"
-                            autoComplete="email"
-                            inputMode="email"
-                            placeholder="tu@email.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleMagicLink()}
-                            disabled={isBusy}
-                            className="field"
-                            aria-label="Email para magic link"
-                            aria-invalid={state === "error" && errorMsg !== ""}
-                        />
-
-                        {state === "error" && errorMsg && (
-                            <p role="alert" className="body-6 mt-2 text-danger-text">{errorMsg}</p>
-                        )}
-
-                        <button
-                            type="button"
-                            onClick={handleMagicLink}
-                            disabled={isBusy || !email.trim()}
-                            aria-busy={state === "sending-link"}
-                            className="btn-primary mt-4 w-full button-md"
-                        >
-                            {state === "sending-link" ? "Enviando…" : "Enviar magic link"}
-                        </button>
-
-                        {/* Demo */}
-                        <button
-                            type="button"
-                            onClick={handleDemo}
-                            disabled={isBusy}
-                            aria-busy={state === "starting-demo"}
-                            className="btn-secondary mt-3 w-full button-md"
-                        >
-                            {state === "starting-demo" ? "Iniciando demo…" : "Probar demo sin registrarte"}
-                        </button>
                     </>
                 )}
+                {flow.step === "code" && (
+                    <h2 className="heading-6 mb-2 text-text-primary">Revisá tu correo</h2>
+                )}
+
+                <EmailCodeForm
+                    flow={flow}
+                    submitCodeLabel="Entrar"
+                    submittingCodeLabel="Entrando…"
+                />
             </div>
 
             <p className="caption-5 mt-6 text-center text-text-muted">

@@ -255,6 +255,13 @@ export class SyncEngine {
                     }
                 }
 
+                if (kind === "unique-conflict" && entry.entity === "profile") {
+                    // The display name is taken: retrying cannot help. Park the
+                    // refusal for the UI and keep sending the rest of the queue.
+                    await repos.sync.rejectProfileWrite(entry);
+                    continue;
+                }
+
                 if (kind === "missing-parent" && (await this.sendDetached(entry, command))) {
                     continue;
                 }

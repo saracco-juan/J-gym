@@ -4,25 +4,34 @@
  * the session, never from the stored payload.
  */
 
-import type { IRoutineTemplate, IWorkoutLog } from "../domain";
+import type { IProfile, IRoutineTemplate, IWorkoutLog } from "../domain";
 import {
     customExerciseToRow,
     logToRow,
+    profileToRow,
     routineToRow,
     type CustomExerciseWithUser,
 } from "../mappers";
 import type { OutboxEntry } from "./outbox";
 
-export type SyncTable = "routine_templates" | "workout_logs" | "custom_exercises";
+export type SyncTable = "routine_templates" | "workout_logs" | "custom_exercises" | "profiles";
 
 export type SyncCommand =
-    | { kind: "upsert"; table: SyncTable; row: Record<string, unknown> }
+    | {
+          kind: "upsert";
+          table: SyncTable;
+          row: Record<string, unknown>;
+          /** Conflict column when it is not `id` (profiles are keyed by user_id). */
+          onConflict?: string;
+      }
     | { kind: "delete"; table: "routine_templates" | "workout_logs"; id: string }
     | { kind: "soft-delete"; table: "custom_exercises"; id: string; deletedAt: string };
 
 export function toSyncCommand(entry: OutboxEntry, userId: string, nowIso: string): SyncCommand {
     if (entry.op === "delete") {
         switch (entry.entity) {
+            case "profile":
+                throw new Error("A profile is never deleted by the client (it goes with its user).");
             case "routine":
                 return { kind: "delete", table: "routine_templates", id: entry.entityId };
             case "workoutLog":
@@ -48,6 +57,13 @@ export function toSyncCommand(entry: OutboxEntry, userId: string, nowIso: string
                 kind: "upsert",
                 table: "workout_logs",
                 row: { ...logToRow(entry.payload as IWorkoutLog), user_id: userId },
+            };
+        case "profile":
+            return {
+                kind: "upsert",
+                table: "profiles",
+                onConflict: "user_id",
+                row: { ...profileToRow(entry.payload as IProfile), user_id: userId },
             };
         case "customExercise":
             return {

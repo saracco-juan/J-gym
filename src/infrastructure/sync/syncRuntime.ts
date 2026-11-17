@@ -6,7 +6,7 @@
 import { canClearLocalData, resolveUserId } from "@/core/sync";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
-import { lastPulledKey, runInitialPull } from "./initialPull";
+import { lastPulledKey, pullOwnProfile, runInitialPull } from "./initialPull";
 import { SyncEngine } from "./SyncEngine";
 import { createSupabaseTransport } from "./supabaseTransport";
 
@@ -90,4 +90,22 @@ export async function waitForFirstPull(userId: string): Promise<void> {
     } catch {
         // Best effort: the dashboard decides with whatever is local.
     }
+}
+
+/**
+ * Looks for the own profile on the server when the device has none (another
+ * device may have created it). Best effort and online only: returns whether
+ * a profile is now stored locally.
+ */
+export async function refreshOwnProfile(userId: string): Promise<boolean> {
+    const repos = getLocalRepositories();
+    if (await repos.profiles.get(userId)) return true;
+    if (typeof navigator !== "undefined" && !navigator.onLine) return false;
+    try {
+        const transport = createSupabaseTransport(createSupabaseBrowserClient());
+        await pullOwnProfile(repos, transport, userId);
+    } catch {
+        // Best effort: the caller decides with whatever is local.
+    }
+    return (await repos.profiles.get(userId)) !== undefined;
 }

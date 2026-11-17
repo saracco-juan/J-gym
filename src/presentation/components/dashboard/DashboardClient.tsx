@@ -5,7 +5,8 @@
  *
  * Mantiene estados: activeWeek + selectedDate.
  * Coordina WeekCalendar + RoutineSummary.
- * Redirige a /onboarding si el usuario no tiene rutinas.
+ * Redirige a /onboarding si el usuario no tiene rutinas y a /profile si un
+ * usuario registrado todavía no tiene perfil.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -17,11 +18,15 @@ import DashboardSkeleton, { ExerciseListSkeleton } from "./DashboardSkeleton";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
 import { hasRoutines, isDayLocked, loadDayData, loadStagnantExercises } from "@/infrastructure/local/queries";
 import type { DayDataResult } from "@/infrastructure/local/queries";
-import { waitForFirstPull } from "@/infrastructure/sync/syncRuntime";
+import { refreshOwnProfile, waitForFirstPull } from "@/infrastructure/sync/syncRuntime";
+import LinkEmailBanner from "@/presentation/components/auth/LinkEmailBanner";
+import { useAuthStore } from "@/presentation/stores/useAuthStore";
+import { refreshProfile, useProfileStore } from "@/presentation/stores/useProfileStore";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import { useWorkoutStore } from "@/presentation/stores/useWorkoutStore";
 import type { IRoutineTemplate } from "@/core/domain/routine-template";
 import { getDailyQuote } from "@/core/constants/quotes";
+import { decideProfileGate } from "@/core/profile";
 import { Moon } from "@phosphor-icons/react";
 
 // ─── Helpers ───────────────────────────────────────────────────────
@@ -96,6 +101,31 @@ export default function DashboardClient() {
             cancelled = true;
         };
     }, [router, userId]);
+
+    // ─── Profile check ───────────────────────────────────────
+    // After onboarding, a registered user without a profile goes to /profile.
+    // Anonymous accounts get the link-email banner instead.
+
+    const authUser = useAuthStore((s) => s.user);
+    const profile = useProfileStore((s) => s.profile);
+
+    useEffect(() => {
+        if (isCheckingOnboarding || !userId || !authUser || profile === undefined) return;
+        const gate = decideProfileGate({
+            isAnonymous: authUser.isAnonymous,
+            hasProfile: profile !== null,
+        });
+        if (gate !== "setup-profile") return;
+        let cancelled = false;
+        void refreshOwnProfile(userId).then(async (found) => {
+            if (cancelled) return;
+            if (found) await refreshProfile(userId);
+            else router.replace("/profile");
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [isCheckingOnboarding, userId, authUser, profile, router]);
 
     // ─── Read data on date change (local database) ───────────
 
@@ -179,6 +209,8 @@ export default function DashboardClient() {
 
     return (
         <div className="flex flex-col gap-4">
+            <LinkEmailBanner />
+
             <WeekCalendar
                 activeWeek={activeWeek}
                 selectedDate={selectedDate}

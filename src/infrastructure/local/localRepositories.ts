@@ -11,7 +11,7 @@
  */
 
 import type { CustomExercise } from "@/core/catalog";
-import type { IRoutineTemplate, IWorkoutLog } from "@/core/domain";
+import type { IProfile, IRoutineTemplate, IWorkoutLog } from "@/core/domain";
 import type { SessionState } from "@/core/session";
 import {
     coalesceEntry,
@@ -26,6 +26,7 @@ import {
     type ActiveSessionMeta,
     type ActiveSessionRecord,
     type JgymDatabase,
+    type ProfileRejection,
     type StoredCustomExercise,
 } from "./db";
 
@@ -35,6 +36,9 @@ export interface LocalDeps {
     /** Called after a synced write committed (data + outbox entry). */
     onWrite?: () => void;
 }
+
+/** `meta` key of the notice about a profile write the server refused. */
+export const profileRejectionKey = (userId: string) => `profileRejected:${userId}`;
 
 const writeListeners = new Set<() => void>();
 
@@ -175,6 +179,26 @@ export function createLocalRepositories(
         },
     };
 
+    /** The own profile. One row per user: `userId` is the key and the outbox entity id. */
+    const profiles = {
+        get: (userId: string): Promise<IProfile | undefined> => db.profiles.get(userId),
+        async save(profile: IProfile): Promise<void> {
+            await db.transaction("rw", [db.profiles, db.outbox, db.meta], async () => {
+                await db.profiles.put(profile);
+                await enqueueWrite("profile", profile.userId, "upsert", profile);
+                // A new attempt supersedes the previous refusal.
+                await db.meta.delete(profileRejectionKey(profile.userId));
+            });
+            notify();
+        },
+        /** Why the server refused the last profile write, if it did. */
+        async getRejection(userId: string): Promise<ProfileRejection | undefined> {
+            return (await db.meta.get(profileRejectionKey(userId)))?.value as
+                | ProfileRejection
+                | undefined;
+        },
+    };
+
     /** In-progress session: local only, never synced (no outbox entry). */
     const activeSession = {
         get: (userId: string): Promise<ActiveSessionRecord | undefined> =>
@@ -271,6 +295,38 @@ export function createLocalRepositories(
             if (done) notify();
             return done;
         },
+        /**
+         * The server refused the profile write because the name is taken. Retrying
+         * cannot succeed, so the entry leaves the queue and the reason is kept for
+         * the UI. The local profile stays: it is still what the user typed.
+         */
+        async rejectProfileWrite(entry: OutboxEntry): Promise<void> {
+            const payload = entry.payload as IProfile;
+            const rejection: ProfileRejection = {
+                displayName: payload.displayName,
+                reason: "name-taken",
+            };
+            await db.transaction("rw", [db.outbox, db.meta], async () => {
+                await db.meta.put({ key: profileRejectionKey(payload.userId), value: rejection });
+                await db.outbox.delete(entry.id);
+            });
+        },
+        /**
+         * Stores a server profile unless the device already has one or has a
+         * profile write waiting. No outbox entry, no write notification.
+         */
+        async storeProfileIfAbsent(profile: IProfile): Promise<boolean> {
+            return db.transaction("rw", [db.profiles, db.outbox], async () => {
+                if (await db.profiles.get(profile.userId)) return false;
+                const pending = await db.outbox
+                    .where("[entity+entityId]")
+                    .equals(["profile", profile.userId])
+                    .first();
+                if (pending) return false;
+                await db.profiles.put(profile);
+                return true;
+            });
+        },
         /** Stores server data as-is: no outbox entries, no write notification. */
         async applyPull(data: {
             routines: IRoutineTemplate[];
@@ -304,6 +360,7 @@ export function createLocalRepositories(
                 db.activeSession,
                 db.meta,
                 db.outbox,
+                db.profiles,
             ];
             await db.transaction("rw", all, async () => {
                 await Promise.all(all.map((t) => t.clear()));
@@ -311,7 +368,7 @@ export function createLocalRepositories(
         },
     };
 
-    return { routines, customExercises, workoutLogs, activeSession, meta, outbox, sync };
+    return { routines, customExercises, workoutLogs, profiles, activeSession, meta, outbox, sync };
 }
 
 export type LocalRepositories = ReturnType<typeof createLocalRepositories>;

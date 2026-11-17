@@ -10,6 +10,8 @@ import { useEffect } from "react";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
 import { getSyncEngine, resolveLocalUserId } from "@/infrastructure/sync/syncRuntime";
 import { startSessionPersistence } from "@/presentation/stores/sessionPersistence";
+import { refreshAuthUser } from "@/presentation/stores/useAuthStore";
+import { refreshProfile } from "@/presentation/stores/useProfileStore";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 
 export default function SyncProvider({ children }: { children: React.ReactNode }) {
@@ -23,11 +25,18 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
                 pendingCount: s.pendingCount,
                 lastSyncedAt: s.lastSyncedAt,
             });
+            // A sync may have pulled or refused the profile: re-read it.
+            if (s.status !== "syncing") {
+                const id = useSyncStore.getState().userId;
+                if (id) void refreshProfile(id);
+            }
         });
 
         const refreshUser = async () => {
             const id = await resolveLocalUserId();
-            if (active) useSyncStore.setState({ userId: id });
+            if (!active) return;
+            useSyncStore.setState({ userId: id });
+            await Promise.all([refreshAuthUser(), refreshProfile(id)]);
         };
         void refreshUser();
 

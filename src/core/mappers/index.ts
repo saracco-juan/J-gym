@@ -9,3 +9,5 @@ export { LOG_SCHEMA_VERSION, logFromRow, logToRow } from "./log-mapper";
 export type { WorkoutLogRow } from "./log-mapper";
 export { customExerciseFromRow, customExerciseToRow } from "./custom-exercise-mapper";
 export type { CustomExerciseRow, CustomExerciseWithUser } from "./custom-exercise-mapper";
+export { profileFromRow, profileToRow } from "./profile-mapper";
+export type { ProfileRow } from "./profile-mapper";
