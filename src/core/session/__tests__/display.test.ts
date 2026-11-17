@@ -2,6 +2,7 @@ import {
     countUnloggedExercises,
     exerciseCardStatus,
     exerciseStatusLabel,
+    formatSetTarget,
     formatSetValue,
     formatExerciseScheme,
     formatWeight,
@@ -50,6 +51,20 @@ describe("formatSetValue", () => {
     });
 });
 
+describe("formatSetTarget", () => {
+    it("shows reps and weight when both are planned", () => {
+        expect(formatSetTarget(8, 20, false)).toBe("8 × 20kg");
+    });
+
+    it("shows only reps when a weighted lift has no target weight yet", () => {
+        expect(formatSetTarget(8, 0, false)).toBe("8 reps");
+    });
+
+    it("returns null when there are no target reps", () => {
+        expect(formatSetTarget(0, 20, false)).toBeNull();
+    });
+});
+
 describe("formatExerciseScheme", () => {
     it("summarizes sets, reps and weight", () => {
         const e = exercise({ sets: [set(1, 8, 20), set(2, 8, 20), set(3, 8, 20), set(4, 8, 20)] });
@@ -64,6 +79,11 @@ describe("formatExerciseScheme", () => {
     it("labels pure bodyweight lifts", () => {
         const e = exercise({ isBodyweight: true, sets: [set(1, 12, 0)] });
         expect(formatExerciseScheme(e)).toBe("1×12 · peso corporal");
+    });
+
+    it("omits the load when a weighted lift has reps but no target weight yet", () => {
+        const e = exercise({ sets: [set(1, 8, 0), set(2, 8, 0), set(3, 8, 0)] });
+        expect(formatExerciseScheme(e)).toBe("3×8");
     });
 
     it("says there is no target when planned values are zero", () => {

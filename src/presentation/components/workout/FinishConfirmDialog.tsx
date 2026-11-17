@@ -20,24 +20,24 @@ export default function FinishConfirmDialog({
 }: FinishConfirmDialogProps) {
     return (
         <BottomSheet title="¿Finalizar entrenamiento?" onClose={onCancel}>
-            <p className="text-sm text-zinc-300">
+            <p className="body-6 text-text-secondary">
                 Hay ejercicios sin registrar. Se guardan como salteados.
             </p>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="caption-5 mt-1 text-text-muted">
                 Sin registrar: {unloggedCount}
             </p>
-            <div className="mt-5 flex flex-col gap-2">
+            <div className="mt-4 flex flex-col gap-2">
                 <button
                     type="button"
                     onClick={onConfirm}
-                    className="h-12 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-500 active:scale-[0.98]"
+                    className="btn-primary button-md"
                 >
                     Finalizar igual
                 </button>
                 <button
                     type="button"
                     onClick={onCancel}
-                    className="h-12 rounded-xl border border-zinc-700 text-sm font-semibold text-zinc-300 hover:bg-zinc-800 active:scale-[0.98]"
+                    className="btn-secondary button-md"
                 >
                     Seguir entrenando
                 </button>

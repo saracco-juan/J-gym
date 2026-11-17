@@ -10,7 +10,7 @@
  */
 
 import { useState } from "react";
-import { Info, Plus, Trophy } from "lucide-react";
+import { Info, Plus, Trophy } from "@phosphor-icons/react";
 import {
     exerciseCardStatus,
     formatExerciseScheme,
@@ -60,8 +60,7 @@ function editorDefaults(sets: SessionSet[], setNumber: number): { reps: string; 
     };
 }
 
-const SECONDARY_BUTTON =
-    "flex h-11 flex-1 items-center justify-center rounded-xl border border-zinc-700 px-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 active:scale-[0.98]";
+const SECONDARY_BUTTON = "btn-secondary button-sm min-w-0 flex-auto";
 
 export default function ExerciseCard({
     exercise,
@@ -115,23 +114,23 @@ export default function ExerciseCard({
 
     return (
         <section
-            className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/80"
+            className="overflow-hidden rounded-2xl border border-surface-border bg-surface-raised"
             aria-label={exercise.name}
         >
-            <div className="flex items-start justify-between gap-2 bg-zinc-800/50 px-4 py-3">
+            <div className="flex items-start justify-between gap-2 bg-surface-overlay px-4 py-3">
                 <div className="min-w-0">
-                    <h3 className="text-base font-bold leading-snug text-white">{exercise.name}</h3>
+                    <h3 className="title-2 text-text-primary">{exercise.name}</h3>
                     {replacesName && (
-                        <p className="text-xs text-zinc-500">Reemplaza a {replacesName}</p>
+                        <p className="caption-5 text-text-muted">Reemplaza a {replacesName}</p>
                     )}
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="caption-4 rounded-full bg-accent-soft px-2 py-0.5 text-accent-text">
                             {formatExerciseScheme(exercise)}
                         </span>
                         {status && <ExerciseStatusBadge status={status} />}
                         {personalRecord != null && personalRecord > 0 && (
-                            <span className="flex items-center gap-0.5 rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-bold text-yellow-800">
-                                <Trophy size={11} /> PR {formatWeight(personalRecord)}kg
+                            <span className="caption-3 flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-warning-text">
+                                <Trophy size={16} weight="bold" /> PR {formatWeight(personalRecord)}kg
                             </span>
                         )}
                     </div>
@@ -140,15 +139,15 @@ export default function ExerciseCard({
                     <button
                         type="button"
                         onClick={onShowTips}
-                        className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-700/50 hover:text-white"
+                        className="btn-icon -my-2 -mr-2"
                         aria-label={`Ver técnica de ${exercise.name}`}
                     >
-                        <Info size={20} />
+                        <Info size={24} weight="bold" />
                     </button>
                 )}
             </div>
 
-            <div className="flex flex-col gap-2 p-3">
+            <div className="flex flex-col gap-2 p-4">
                 {sets.map((set) =>
                     editing === set.setNumber ? (
                         <SetEditor
@@ -190,7 +189,7 @@ export default function ExerciseCard({
                     <button
                         type="button"
                         onClick={handleCompleteAll}
-                        className="mt-1 h-12 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-500 active:scale-[0.98]"
+                        className="btn-primary mt-1 button-md"
                         aria-label={`Completar todas las series de ${exercise.name}`}
                     >
                         Completar todo
@@ -204,7 +203,7 @@ export default function ExerciseCard({
                         className={SECONDARY_BUTTON}
                         aria-label={`Agregar serie a ${exercise.name}`}
                     >
-                        <Plus size={14} className="mr-1" /> Serie
+                        <Plus size={16} weight="bold" /> Serie
                     </button>
                     {!exercise.skipped && (
                         <button

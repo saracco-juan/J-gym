@@ -26,8 +26,8 @@ export default function DaySelector({ selectedDays, onToggle }: DaySelectorProps
     return (
         <div className="flex flex-col gap-4">
             <div>
-                <h2 className="text-xl font-bold text-white">¿Qué días entrenás?</h2>
-                <p className="text-sm text-zinc-500 mt-1">
+                <h2 className="heading-6 text-text-primary">¿Qué días entrenás?</h2>
+                <p className="body-6 mt-1 text-text-muted">
                     Seleccioná los días de la semana que vas al gimnasio.
                 </p>
             </div>
@@ -38,10 +38,12 @@ export default function DaySelector({ selectedDays, onToggle }: DaySelectorProps
                     return (
                         <button
                             key={key}
+                            type="button"
                             onClick={() => onToggle(key)}
-                            className={`h-14 rounded-xl font-semibold text-sm transition-all active:scale-[0.97] ${isSelected
-                                    ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/30"
-                                    : "bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-500"
+                            aria-pressed={isSelected}
+                            className={`pressable button-md min-h-12 rounded-xl border px-3 py-2 ${isSelected
+                                    ? "border-accent bg-accent text-text-primary hover:bg-accent-hover"
+                                    : "border-surface-border bg-surface-raised text-text-secondary hover:border-text-muted"
                                 }`}
                         >
                             <span className="hidden sm:inline">{label}</span>
@@ -52,7 +54,7 @@ export default function DaySelector({ selectedDays, onToggle }: DaySelectorProps
             </div>
 
             {selectedDays.length > 0 && (
-                <p className="text-xs text-zinc-500 text-center">
+                <p className="caption-5 text-center text-text-muted">
                     {selectedDays.length} día{selectedDays.length !== 1 ? "s" : ""} seleccionado{selectedDays.length !== 1 ? "s" : ""}
                 </p>
             )}

@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { startOfWeek } from "date-fns";
 import WeekCalendar from "./WeekCalendar";
 import RoutineSummary from "./RoutineSummary";
+import DashboardSkeleton, { ExerciseListSkeleton } from "./DashboardSkeleton";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
 import { hasRoutines, isDayLocked, loadDayData } from "@/infrastructure/local/queries";
 import type { DayDataResult } from "@/infrastructure/local/queries";
@@ -21,7 +22,7 @@ import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import { useWorkoutStore } from "@/presentation/stores/useWorkoutStore";
 import type { IRoutineTemplate } from "@/core/domain/routine-template";
 import { getDailyQuote } from "@/core/constants/quotes";
-import { Moon } from "lucide-react";
+import { Moon } from "@phosphor-icons/react";
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
@@ -152,11 +153,7 @@ export default function DashboardClient() {
     // ─── Loading ─────────────────────────────────────────────
 
     if (isCheckingOnboarding) {
-        return (
-            <div className="flex items-center justify-center py-32">
-                <span className="h-6 w-6 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
-            </div>
-        );
+        return <DashboardSkeleton />;
     }
 
     // ─── Render ──────────────────────────────────────────────
@@ -174,17 +171,17 @@ export default function DashboardClient() {
             />
 
             {/* Daily motivational quote */}
-            <div className="mx-4 rounded-xl bg-zinc-900/60 border border-zinc-800 px-4 py-3">
-                <p className="text-sm text-zinc-400 italic leading-relaxed">
+            <div className="mx-4 rounded-xl border border-surface-border bg-surface-raised px-4 py-3">
+                <p className="body-6 text-text-secondary">
                     &ldquo;{getDailyQuote()}&rdquo;
                 </p>
             </div>
 
             <div className="px-4">
-                <h2 className="text-lg font-bold text-white">
+                <h2 className="heading-6 text-text-primary">
                     {isToday ? "Hoy" : isPast ? "Registro" : "Plan"}
                 </h2>
-                <p className="text-xs text-zinc-500">
+                <p className="caption-5 text-text-muted">
                     {new Date(selectedDate + "T00:00:00").toLocaleDateString("es-AR", {
                         weekday: "long",
                         day: "numeric",
@@ -195,35 +192,37 @@ export default function DashboardClient() {
 
             <div className="px-4 pb-8">
                 {isLoading ? (
-                    <div className="flex items-center justify-center py-16">
-                        <span className="h-6 w-6 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
-                    </div>
+                    <ExerciseListSkeleton />
                 ) : !dayData || dayData.type === "empty" ? (
-                    <div className="flex flex-col items-center justify-center py-16 gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-2xl">
-                            <Moon size={24} className="text-zinc-500" />
+                    <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+                        <div className="flex size-16 items-center justify-center rounded-xl border border-surface-border bg-surface-raised">
+                            <Moon size={32} weight="bold" className="text-text-muted" />
                         </div>
-                        <p className="text-sm text-zinc-500 text-center">
+                        <h3 className="title-2 text-text-primary">
+                            {isPast ? "Sin registro" : "Día de descanso"}
+                        </h3>
+                        <p className="body-6 max-w-xs text-text-secondary">
                             {isPast ? "No se entrenó este día." : "No hay rutina asignada para este día."}
                         </p>
                     </div>
                 ) : dayData.type === "error" ? (
-                    <div className="rounded-xl bg-red-900/20 border border-red-800/50 px-4 py-3">
-                        <p className="text-sm text-red-300">{dayData.error}</p>
+                    <div role="alert" className="rounded-xl border border-danger-border bg-danger-soft px-4 py-3">
+                        <p className="body-6 text-danger-text">{dayData.error}</p>
                     </div>
                 ) : dayData.type === "template" ? (
                     <div className="flex flex-col gap-4">
                         <RoutineSummary mode="template" template={dayData.data} />
                         {!isPast && (
                             <button
+                                type="button"
                                 onClick={() => handleStartWorkout(dayData.data)}
                                 disabled={dayData.action === "future"}
-                                className="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] font-bold text-white text-base transition-all shadow-lg shadow-emerald-900/30 disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed disabled:shadow-none"
+                                className="btn-primary w-full button-md"
                             >
                                 {dayData.action === "resume"
-                                    ? "Continuar Rutina"
+                                    ? "Continuar rutina"
                                     : dayData.action === "start"
-                                        ? "Empezar Rutina"
+                                        ? "Empezar rutina"
                                         : "Rutina futura"}
                             </button>
                         )}
@@ -233,10 +232,7 @@ export default function DashboardClient() {
                         <RoutineSummary mode="log" log={dayData.data} />
                         {isToday && (
                             // Today's workout is finished: the day is locked.
-                            <button
-                                disabled
-                                className="w-full h-14 rounded-2xl font-bold text-base bg-zinc-700 text-zinc-500 cursor-not-allowed"
-                            >
+                            <button type="button" disabled className="btn-primary w-full button-md">
                                 Entrenamiento completado
                             </button>
                         )}

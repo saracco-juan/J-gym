@@ -5,7 +5,7 @@ export default function OfflineRetry() {
         <button
             type="button"
             onClick={() => window.location.reload()}
-            className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-medium text-white active:bg-emerald-700"
+            className="btn-primary button-md"
         >
             Reintentar
         </button>

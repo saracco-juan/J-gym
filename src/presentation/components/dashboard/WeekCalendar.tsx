@@ -10,7 +10,7 @@
  */
 
 import { useMemo, useCallback } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import {
     startOfWeek,
     addDays,
@@ -77,28 +77,30 @@ export default function WeekCalendar({
             {/* Header: Mes/Año + flechas */}
             <div className="flex items-center justify-between">
                 <button
+                    type="button"
                     onClick={goPrev}
-                    className="p-2 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 active:scale-95 transition-all"
+                    className="btn-icon bg-surface-overlay"
                     aria-label="Semana anterior"
                 >
-                    <ChevronLeft size={18} />
+                    <CaretLeft size={24} weight="bold" />
                 </button>
 
-                <span className="text-sm font-semibold text-white capitalize">
+                <span className="body-4 text-text-primary capitalize">
                     {monthLabel}
                 </span>
 
                 <button
+                    type="button"
                     onClick={goNext}
-                    className="p-2 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 active:scale-95 transition-all"
+                    className="btn-icon bg-surface-overlay"
                     aria-label="Semana siguiente"
                 >
-                    <ChevronRight size={18} />
+                    <CaretRight size={24} weight="bold" />
                 </button>
             </div>
 
             {/* Days row */}
-            <div className="flex gap-1.5">
+            <div className="flex gap-2">
                 {weekDays.map(({ label, dateStr, dayNum }) => {
                     const isToday = dateStr === todayStr;
                     const isSelected = dateStr === selectedDate;
@@ -106,20 +108,22 @@ export default function WeekCalendar({
                     return (
                         <button
                             key={dateStr}
+                            type="button"
                             onClick={() => onSelectDate(dateStr)}
-                            className={`flex-1 flex flex-col items-center justify-center h-16 rounded-xl transition-all ${isSelected
-                                    ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/30"
+                            className={`pressable flex h-16 min-w-0 flex-1 flex-col items-center justify-center rounded-xl border ${isSelected
+                                    ? "border-accent bg-accent text-text-primary"
                                     : isToday
-                                        ? "bg-zinc-800 text-emerald-400 border border-emerald-700/50"
-                                        : "bg-zinc-900/50 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+                                        ? "border-accent-border bg-surface-overlay text-accent-text hover:bg-surface-strong"
+                                        : "border-surface-border bg-surface-raised text-text-muted hover:bg-surface-strong hover:text-text-primary"
                                 }`}
                             aria-label={`${label} ${dayNum}`}
                             aria-pressed={isSelected}
+                            aria-current={isToday ? "date" : undefined}
                         >
-                            <span className="text-[10px] font-semibold tracking-wider">
+                            <span className="caption-3 tracking-wider">
                                 {label}
                             </span>
-                            <span className={`text-lg font-bold ${isSelected ? "text-white" : ""}`}>
+                            <span className="title-2">
                                 {dayNum}
                             </span>
                         </button>
