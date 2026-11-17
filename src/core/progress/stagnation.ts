@@ -19,6 +19,7 @@ import type { IWorkoutLog } from "../domain/workout-log";
 import { formatWeight } from "../session/display";
 import { exerciseKey } from "../use-cases/detect-personal-records";
 import { chronological } from "./chronological";
+import type { ExerciseSession } from "./history";
 
 /** Consecutive failed sessions that make an exercise stagnant. */
 export const STAGNATION_SESSIONS = 3;
@@ -60,6 +61,16 @@ export function findStagnantExercises(logs: readonly IWorkoutLog[]): Set<string>
         if (recent.length === STAGNATION_SESSIONS && recent.every(Boolean)) stagnant.add(key);
     }
     return stagnant;
+}
+
+/**
+ * Same rule over one exercise's history (oldest first): the last
+ * STAGNATION_SESSIONS performed sessions all failed.
+ */
+export function isStagnantHistory(sessions: readonly ExerciseSession[]): boolean {
+    const performed = sessions.filter((s) => s.status === "completed" || s.status === "failed");
+    const recent = performed.slice(-STAGNATION_SESSIONS);
+    return recent.length === STAGNATION_SESSIONS && recent.every((s) => s.status === "failed");
 }
 
 /**

@@ -1,9 +1,11 @@
 import type { ExerciseLogStatus, IWorkoutLog } from "../../domain";
+import type { ExerciseSession } from "../history";
 import {
     STAGNATION_SESSIONS,
     findStagnantExercises,
     formatStagnationSuggestion,
     isExerciseStagnant,
+    isStagnantHistory,
     suggestStagnationAction,
 } from "../stagnation";
 
@@ -250,5 +252,42 @@ describe("formatStagnationSuggestion", () => {
         expect(formatStagnationSuggestion({ kind: "fewer-reps", from: 10, to: 8 })).toBe(
             "Prueba bajar de 10 a 8 repeticiones para recuperar el ritmo."
         );
+    });
+});
+
+describe("isStagnantHistory", () => {
+    const session = (status: ExerciseSession["status"], day: number): ExerciseSession => ({
+        date: `2026-01-${String(day).padStart(2, "0")}`,
+        logId: `l${day}`,
+        bestWeight: 60,
+        bestReps: 5,
+        volume: 300,
+        status,
+    });
+
+    it("is true when the last three performed sessions failed", () => {
+        expect(
+            isStagnantHistory([session("completed", 1), session("failed", 2), session("failed", 3), session("failed", 4)])
+        ).toBe(true);
+    });
+
+    it("skips sessions that were not performed", () => {
+        expect(
+            isStagnantHistory([
+                session("failed", 1),
+                session("skipped", 2),
+                session("failed", 3),
+                session(null, 4),
+                session("failed", 5),
+            ])
+        ).toBe(true);
+    });
+
+    it("is false with fewer than three performed sessions or a recent completion", () => {
+        expect(isStagnantHistory([session("failed", 1), session("failed", 2)])).toBe(false);
+        expect(
+            isStagnantHistory([session("failed", 1), session("failed", 2), session("failed", 3), session("completed", 4)])
+        ).toBe(false);
+        expect(isStagnantHistory([])).toBe(false);
     });
 });

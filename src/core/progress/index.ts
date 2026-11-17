@@ -3,6 +3,7 @@ export {
     findStagnantExercises,
     formatStagnationSuggestion,
     isExerciseStagnant,
+    isStagnantHistory,
     suggestStagnationAction,
 } from "./stagnation";
 export type { StagnationSuggestion, StagnationSuggestionInput } from "./stagnation";
