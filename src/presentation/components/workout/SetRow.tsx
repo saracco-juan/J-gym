@@ -8,7 +8,7 @@
  * it when already logged); tapping the values opens the inline editor.
  */
 
-import { Check } from "lucide-react";
+import { Check } from "@phosphor-icons/react";
 import { formatSetValue } from "@/core/session";
 
 interface SetRowProps {
@@ -81,7 +81,7 @@ export default function SetRow({
                 }
                 aria-pressed={logged !== null}
             >
-                <Check size={22} strokeWidth={3} />
+                <Check size={22} weight="bold" />
             </button>
         </div>
     );

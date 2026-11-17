@@ -5,7 +5,7 @@
  * Presentational: data and callbacks come from ExercisePicker.
  */
 
-import { Plus, Search } from "lucide-react";
+import { Plus, MagnifyingGlass } from "@phosphor-icons/react";
 import type { MuscleGroup } from "@/core/catalog";
 import { MUSCLE_GROUPS, muscleGroupLabel, type PickerOption } from "@/core/catalog/picker";
 import BottomSheet from "@/presentation/components/ui/BottomSheet";
@@ -49,7 +49,7 @@ export default function ExercisePickerView({
             {children ?? (
                 <>
                     <div className="relative">
-                        <Search
+                        <MagnifyingGlass
                             size={18}
                             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
                         />

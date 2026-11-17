@@ -11,7 +11,7 @@
 
 import { useState, useCallback } from "react";
 import { useWorkoutStore } from "@/presentation/stores/useWorkoutStore";
-import { TrendingUp } from "lucide-react";
+import { TrendUp } from "@phosphor-icons/react";
 
 export default function WeightInputModal() {
     const session = useWorkoutStore((s) => s.session);
@@ -68,7 +68,7 @@ export default function WeightInputModal() {
                 <div className="px-5 pt-5 pb-3">
                     <div className="w-10 h-1 bg-zinc-600 rounded-full mx-auto mb-4 sm:hidden" />
                     <h2 className="text-lg font-bold text-white">
-                        <TrendingUp size={20} className="inline mr-1.5 text-amber-400" /> ¡Subí el peso!
+                        <TrendUp size={20} className="inline mr-1.5 text-amber-400" /> ¡Subí el peso!
                     </h2>
                     <p className="text-sm text-zinc-400 mt-1">
                         Superaste el esquema en estos ejercicios. Ingresá el nuevo peso

@@ -14,7 +14,7 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { signInAsDemo } from "@/infrastructure/auth/demoSignIn";
 import { createSupabaseBrowserClient } from "@/infrastructure/auth/browserClient";
-import { Dumbbell, Mail } from "lucide-react";
+import { Barbell, Envelope } from "@phosphor-icons/react";
 
 // Each action has its own pending state so only the clicked button shows progress.
 type LoginState = "idle" | "sending-link" | "starting-demo" | "success" | "error";
@@ -67,7 +67,7 @@ export default function LoginView() {
             {/* Logo */}
             <div className="flex flex-col items-center gap-3 mb-10">
                 <div className="w-20 h-20 rounded-3xl bg-emerald-600 flex items-center justify-center text-4xl shadow-lg shadow-emerald-900/40">
-                    <Dumbbell size={36} className="text-white" />
+                    <Barbell size={36} className="text-white" />
                 </div>
                 <h1 className="text-3xl font-bold text-white">J-GYM</h1>
                 <p className="text-sm text-zinc-500">Sobrecarga Progresiva</p>
@@ -78,7 +78,7 @@ export default function LoginView() {
                 {state === "success" ? (
                     <div className="flex flex-col items-center gap-3 py-4">
                         <div className="w-14 h-14 rounded-2xl bg-emerald-600/20 flex items-center justify-center text-3xl">
-                            <Mail size={28} className="text-emerald-400" />
+                            <Envelope size={28} className="text-emerald-400" />
                         </div>
                         <h2 className="text-lg font-bold text-white text-center">
                             ¡Revisá tu correo!

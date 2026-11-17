@@ -10,7 +10,7 @@
  */
 
 import { useState } from "react";
-import { Info, Plus, Trophy } from "lucide-react";
+import { Info, Plus, Trophy } from "@phosphor-icons/react";
 import {
     exerciseCardStatus,
     formatExerciseScheme,

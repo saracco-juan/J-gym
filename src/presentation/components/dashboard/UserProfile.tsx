@@ -15,7 +15,7 @@ import { resetUserData } from "@/infrastructure/local/queries";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import { signOutAndClear } from "@/infrastructure/sync/syncRuntime";
 import { getUserDisplay } from "@/core/domain/user-display";
-import { LogOut, RotateCcw } from "lucide-react";
+import { SignOut, ArrowCounterClockwise } from "@phosphor-icons/react";
 
 interface UserInfo {
     email: string;
@@ -142,7 +142,7 @@ export default function UserProfile() {
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 transition-all"
                     >
-                        <LogOut size={16} /> Cerrar Sesión
+                        <SignOut size={16} /> Cerrar Sesión
                     </button>
 
                     {/* Reset (development only) */}
@@ -152,7 +152,7 @@ export default function UserProfile() {
                             disabled={isResetting}
                             className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-zinc-800 transition-all disabled:opacity-50"
                         >
-                            <RotateCcw size={16} className={isResetting ? "animate-spin" : ""} />
+                            <ArrowCounterClockwise size={16} className={isResetting ? "animate-spin" : ""} />
                             {isResetting ? "Reseteando..." : "Reset App (Dev)"}
                         </button>
                     )}

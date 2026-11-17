@@ -10,7 +10,7 @@
  */
 
 import { useMemo, useCallback } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import {
     startOfWeek,
     addDays,
@@ -81,7 +81,7 @@ export default function WeekCalendar({
                     className="p-2 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 active:scale-95 transition-all"
                     aria-label="Semana anterior"
                 >
-                    <ChevronLeft size={18} />
+                    <CaretLeft size={18} />
                 </button>
 
                 <span className="text-sm font-semibold text-white capitalize">
@@ -93,7 +93,7 @@ export default function WeekCalendar({
                     className="p-2 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 active:scale-95 transition-all"
                     aria-label="Semana siguiente"
                 >
-                    <ChevronRight size={18} />
+                    <CaretRight size={18} />
                 </button>
             </div>
 

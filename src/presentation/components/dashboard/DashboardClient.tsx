@@ -21,7 +21,7 @@ import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import { useWorkoutStore } from "@/presentation/stores/useWorkoutStore";
 import type { IRoutineTemplate } from "@/core/domain/routine-template";
 import { getDailyQuote } from "@/core/constants/quotes";
-import { Moon } from "lucide-react";
+import { Moon } from "@phosphor-icons/react";
 
 // ─── Helpers ───────────────────────────────────────────────────────
 

@@ -5,7 +5,7 @@
  * everything is synced; otherwise says what is going on.
  */
 
-import { CloudOff, RefreshCw, UploadCloud } from "lucide-react";
+import { CloudSlash, ArrowsClockwise, CloudArrowUp } from "@phosphor-icons/react";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 
 export default function SyncBadge() {
@@ -21,14 +21,14 @@ export default function SyncBadge() {
 
     if (status === "syncing") {
         label = "Sincronizando…";
-        icon = <RefreshCw size={12} className="animate-spin" />;
+        icon = <ArrowsClockwise size={12} className="animate-spin" />;
         tone = "text-emerald-400 bg-emerald-950/40 border-emerald-900/60";
     } else if (status === "offline") {
         label = pendingCount > 0 ? `Sin conexión · ${pendingCount} sin sincronizar` : "Sin conexión";
-        icon = <CloudOff size={12} />;
+        icon = <CloudSlash size={12} />;
     } else {
         label = `${pendingCount} sin sincronizar`;
-        icon = <UploadCloud size={12} />;
+        icon = <CloudArrowUp size={12} />;
     }
 
     return (

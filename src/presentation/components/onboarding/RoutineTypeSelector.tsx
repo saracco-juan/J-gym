@@ -7,7 +7,7 @@
  * o crear su propia rutina desde cero.
  */
 
-import { Dumbbell, Pencil } from "lucide-react";
+import { Barbell, PencilSimple } from "@phosphor-icons/react";
 import { DEFAULT_ROUTINES } from "@/core/constants/defaultRoutines";
 
 interface RoutineTypeSelectorProps {
@@ -40,7 +40,7 @@ export default function RoutineTypeSelector({
                         }`}
                 >
                     <div className="flex items-center gap-3">
-                        <Dumbbell size={24} className="text-emerald-400" />
+                        <Barbell size={24} className="text-emerald-400" />
                         <div>
                             <span className="text-base font-bold text-white">
                                 Rutina de Gimnasio
@@ -65,7 +65,7 @@ export default function RoutineTypeSelector({
                         }`}
                 >
                     <div className="flex items-center gap-3">
-                        <Pencil size={24} className="text-zinc-300" />
+                        <PencilSimple size={24} className="text-zinc-300" />
                         <span className="text-base font-bold text-white">
                             Crear mi propia rutina
                         </span>

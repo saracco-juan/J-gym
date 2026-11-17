@@ -19,7 +19,7 @@ import FinishConfirmDialog from "./FinishConfirmDialog";
 import TipsSheet from "./TipsSheet";
 import WeightInputModal from "./WeightInputModal";
 import { useFinishWorkout } from "./useFinishWorkout";
-import { Dumbbell, Plus, Trophy } from "lucide-react";
+import { Barbell, Plus, Trophy } from "@phosphor-icons/react";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
 import { loadPersonalBests } from "@/infrastructure/local/queries";
 import { getCatalogExercise, type ExerciseRef } from "@/core/catalog";
@@ -97,7 +97,7 @@ export default function ActiveWorkoutView() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-6">
                 <div className="w-16 h-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-3xl">
-                    <Dumbbell size={28} className="text-zinc-400" />
+                    <Barbell size={28} className="text-zinc-400" />
                 </div>
                 <h2 className="text-lg font-bold text-white text-center">
                     Sin entrenamiento activo

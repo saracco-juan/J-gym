@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { X } from "@phosphor-icons/react";
 
 interface BottomSheetProps {
     title: string;
