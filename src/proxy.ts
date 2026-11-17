@@ -1,19 +1,20 @@
 /**
- * Next.js Proxy (formerly Middleware) — Supabase session refresh & route protection.
+ * Next.js Proxy (formerly Middleware) — UX redirects based on the auth cookie.
  *
- * Intercepts all requests to:
- * 1. Refresh the Supabase auth session (extend cookie TTL).
- * 2. Redirect unauthenticated users away from protected routes.
- * 3. Redirect authenticated users away from login/root pages.
+ * 1. Signed-out visitors on protected routes (and `/`) go to /login.
+ * 2. Signed-in visitors on `/` or /login go to /dashboard.
+ *
+ * The decision is local (cookie only, no network call). It is NOT a security
+ * boundary: data access is enforced by Row Level Security in Supabase.
  *
  * PWA files (manifest, SW, icons) are excluded via the matcher.
  */
 
 import { type NextRequest } from "next/server";
-import { updateSession } from "@/infrastructure/auth/middlewareClient";
+import { guardRequest } from "@/infrastructure/auth/proxyGuard";
 
-export async function proxy(request: NextRequest) {
-    return await updateSession(request);
+export function proxy(request: NextRequest) {
+    return guardRequest(request);
 }
 
 export const config = {
@@ -23,9 +24,9 @@ export const config = {
          * - _next/static (static files)
          * - _next/image (image optimization)
          * - favicon.ico (favicon file)
-         * - PWA files (manifest.json, sw.js, workbox-*.js, icons/)
+         * - PWA files (manifest.json, sw.js, swe-worker-*.js, icons/)
          * - public assets (svg, png, jpg, etc.)
          */
-        "/((?!_next/static|_next/image|favicon.ico|manifest\\.json|sw\\.js|workbox-.*\\.js|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+        "/((?!_next/static|_next/image|favicon.ico|manifest\\.json|sw\\.js|swe-worker-.*\\.js|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
     ],
 };

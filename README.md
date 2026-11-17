@@ -20,7 +20,7 @@ The UI is in Spanish.
 - **Workout session:** log reps and weight per set, then finish to save an immutable log.
 - **Personal records** detected when a session beats your previous best weight.
 - **Progressive overload engine** updates the next session's scheme from your performance.
-- **Installable PWA** (manifest + service worker).
+- **Installable PWA that works offline:** after one online visit the app opens and navigates (dashboard, workout, onboarding) with no signal. Data is stored on the device first and syncs automatically when the connection returns. Screens never opened online show a "Sin conexión" page.
 
 ### Overload rule (Standard Hypertrophy)
 
@@ -34,7 +34,7 @@ Weight increases are always entered by the user; the app never suggests a weight
 
 ## Stack
 
-Next.js 16 (App Router) · React 19 · TypeScript (strict) · Tailwind CSS 4 · Zustand · Supabase (Postgres, Auth, Row Level Security) · next-pwa · Jest · GitHub Actions · Vercel.
+Next.js 16 (App Router) · React 19 · TypeScript (strict) · Tailwind CSS 4 · Zustand · Supabase (Postgres, Auth, Row Level Security) · Serwist (service worker) · Jest · GitHub Actions · Vercel.
 
 ## Architecture
 
@@ -76,7 +76,7 @@ Open http://localhost:3000.
 | Script | What it does |
 |---|---|
 | `npm run dev` | Development server (PWA disabled in dev) |
-| `npm run build` | Production build (`--webpack`, required by next-pwa) |
+| `npm run build` | Production build (`--webpack`, required by Serwist) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript, no emit |
 | `npm test` | Jest unit tests for `src/core` |
