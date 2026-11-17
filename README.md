@@ -59,7 +59,7 @@ Every table has Row Level Security: users only read and write their own rows (`a
 
 Requirements: Node 20+ and a Supabase project (the free tier works).
 
-1. In Supabase, open the SQL editor and run `supabase/migrations/0001_init.sql` (it is idempotent).
+1. In Supabase, open the SQL editor and run the files in `supabase/migrations/` in order (each one is idempotent). `0003_keep_alive.sql` adds the heartbeat that the daily `keep-alive` workflow writes so the Free project is not paused.
 2. In **Authentication**, enable the Email provider and **anonymous sign-ins**, and add `http://localhost:3000/auth/callback` to the redirect URLs.
 3. Configure and start:
 
