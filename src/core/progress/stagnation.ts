@@ -18,6 +18,7 @@ import type { IExercise } from "../domain/exercises";
 import type { IWorkoutLog } from "../domain/workout-log";
 import { formatWeight } from "../session/display";
 import { exerciseKey } from "../use-cases/detect-personal-records";
+import { chronological } from "./chronological";
 
 /** Consecutive failed sessions that make an exercise stagnant. */
 export const STAGNATION_SESSIONS = 3;
@@ -28,19 +29,6 @@ const WEIGHT_STEP = 2.5;
 const WEIGHT_REDUCTION = 0.1;
 /** Reps a suggestion takes off. */
 const REPS_REDUCTION = 2;
-
-/** Orders logs oldest first by date, then by completion time, keeping input order on ties. */
-export function chronological(logs: readonly IWorkoutLog[]): IWorkoutLog[] {
-    return logs
-        .map((log, index) => ({ log, index }))
-        .sort(
-            (a, b) =>
-                a.log.date.localeCompare(b.log.date) ||
-                (a.log.completedAt ?? "").localeCompare(b.log.completedAt ?? "") ||
-                a.index - b.index
-        )
-        .map(({ log }) => log);
-}
 
 /**
  * Keys of the exercises whose last STAGNATION_SESSIONS performed sessions all
