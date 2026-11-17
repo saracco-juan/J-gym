@@ -22,35 +22,35 @@ export default function RoutineTypeSelector({
     return (
         <div className="flex flex-col gap-4">
             <div>
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="heading-6 text-text-primary">
                     ¿Qué tipo de rutina querés?
                 </h2>
-                <p className="text-sm text-zinc-500 mt-1">
+                <p className="body-6 mt-1 text-text-muted">
                     Podés empezar con una base o armar la tuya desde cero.
                 </p>
             </div>
 
             <div className="flex flex-col gap-3">
-                {/* Opción A: Rutina de Gimnasio por defecto */}
+                {/* Opción A: Rutina de gimnasio por defecto */}
                 <button
+                    type="button"
                     onClick={() => onSelect("default")}
-                    className={`flex flex-col items-start gap-2 rounded-2xl border-2 p-5 text-left transition-all active:scale-[0.98] ${selected === "default"
-                        ? "border-emerald-500 bg-emerald-500/10"
-                        : "border-zinc-700 bg-zinc-900 hover:border-zinc-500"
+                    aria-pressed={selected === "default"}
+                    className={`pressable flex flex-col items-start gap-2 rounded-2xl border p-4 text-left ${selected === "default"
+                        ? "border-accent-hover bg-accent-soft"
+                        : "border-surface-border bg-surface-raised hover:border-text-muted"
                         }`}
                 >
-                    <div className="flex items-center gap-3">
-                        <Barbell size={24} className="text-emerald-400" />
-                        <div>
-                            <span className="text-base font-bold text-white">
-                                Rutina de Gimnasio
-                            </span>
-                            <span className="ml-2 text-xs font-semibold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
-                                Recomendado
-                            </span>
-                        </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Barbell size={24} weight="bold" className="text-accent-text" />
+                        <span className="title-3 text-text-primary">
+                            Rutina de gimnasio
+                        </span>
+                        <span className="caption-3 rounded-full bg-accent-soft px-2 py-0.5 text-accent-text">
+                            Recomendado
+                        </span>
                     </div>
-                    <p className="text-sm text-zinc-400">
+                    <p className="body-6 text-text-secondary">
                         {DEFAULT_ROUTINES[0].description}
                         Vos ponés tus marcas iniciales.
                     </p>
@@ -58,19 +58,21 @@ export default function RoutineTypeSelector({
 
                 {/* Opción B: Personalizada */}
                 <button
+                    type="button"
                     onClick={() => onSelect("custom")}
-                    className={`flex flex-col items-start gap-2 rounded-2xl border-2 p-5 text-left transition-all active:scale-[0.98] ${selected === "custom"
-                        ? "border-emerald-500 bg-emerald-500/10"
-                        : "border-zinc-700 bg-zinc-900 hover:border-zinc-500"
+                    aria-pressed={selected === "custom"}
+                    className={`pressable flex flex-col items-start gap-2 rounded-2xl border p-4 text-left ${selected === "custom"
+                        ? "border-accent-hover bg-accent-soft"
+                        : "border-surface-border bg-surface-raised hover:border-text-muted"
                         }`}
                 >
-                    <div className="flex items-center gap-3">
-                        <PencilSimple size={24} className="text-zinc-300" />
-                        <span className="text-base font-bold text-white">
+                    <div className="flex items-center gap-2">
+                        <PencilSimple size={24} weight="bold" className="text-text-secondary" />
+                        <span className="title-3 text-text-primary">
                             Crear mi propia rutina
                         </span>
                     </div>
-                    <p className="text-sm text-zinc-400">
+                    <p className="body-6 text-text-secondary">
                         Definí tus propios ejercicios, series y repeticiones
                         para cada día de entrenamiento.
                     </p>

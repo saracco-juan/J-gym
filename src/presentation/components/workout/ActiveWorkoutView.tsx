@@ -93,7 +93,7 @@ export default function ActiveWorkoutView() {
 
     if (!session) {
         return (
-            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
+            <div className="flex min-h-96 flex-col items-center justify-center gap-4 px-4 text-center">
                 <div className="flex size-16 items-center justify-center rounded-xl border border-surface-border bg-surface-raised">
                     <Barbell size={32} weight="bold" className="text-text-muted" />
                 </div>
