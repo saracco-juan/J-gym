@@ -4,12 +4,22 @@
  * through the network. All reads are scoped by user id.
  */
 
+import { getCatalogExercise } from "@/core/catalog";
 import type { IRoutineExercise, IRoutineTemplate, IWorkoutLog } from "@/core/domain";
 import { resolveDayView, type DayViewAction } from "@/core/dashboard";
 import { dayNameForDate } from "@/core/schedule";
 import { finalizeSession, type FinalizeResult, type SessionState } from "@/core/session";
 import type { IOverloadStrategy } from "@/core/strategies";
-import { findStagnantExercises } from "@/core/progress";
+import {
+    buildExerciseHistory,
+    buildProgressSeries,
+    findPersonalRecord,
+    findStagnantExercises,
+    isStagnantHistory,
+    type ExerciseSession,
+    type PersonalRecord,
+    type ProgressSeries,
+} from "@/core/progress";
 import { computePersonalBests } from "@/core/use-cases";
 import type { ActiveSessionRecord } from "./db";
 import type { LocalRepositories } from "./localRepositories";
@@ -112,6 +122,50 @@ export async function loadStagnantExercises(
     userId: string
 ): Promise<Set<string>> {
     return findStagnantExercises(await repos.workoutLogs.listByUser(userId));
+}
+
+export interface ExerciseHistoryResult {
+    name: string;
+    isBodyweight: boolean;
+    /** Oldest first. */
+    sessions: ExerciseSession[];
+    record: PersonalRecord | null;
+    series: ProgressSeries;
+    stagnant: boolean;
+}
+
+/**
+ * Everything the history screen shows for one exercise, from the local logs.
+ * The name comes from the catalog, then the user's custom exercise, then the
+ * latest log that mentions it, and finally the key itself.
+ */
+export async function loadExerciseHistory(
+    repos: LocalRepositories,
+    userId: string,
+    key: string
+): Promise<ExerciseHistoryResult> {
+    const logs = await repos.workoutLogs.listByUser(userId);
+    const sessions = buildExerciseHistory(logs, key);
+    const catalog = getCatalogExercise(key);
+    const custom = catalog ? undefined : await repos.customExercises.get(key);
+    const ownCustom = custom && custom.userId === userId ? custom : undefined;
+
+    let name = catalog?.nameEs ?? ownCustom?.name;
+    if (!name) {
+        // Sessions are oldest first: the last one carries the latest name.
+        const lastLogId = sessions[sessions.length - 1]?.logId;
+        const lastLog = logs.find((l) => l.id === lastLogId);
+        name = lastLog?.exercises.find((e) => e.ref?.id === key || e.exercise.id === key)?.exercise.name;
+    }
+
+    return {
+        name: name ?? key,
+        isBodyweight: catalog?.isBodyweight ?? ownCustom?.isBodyweight ?? false,
+        sessions,
+        record: findPersonalRecord(sessions),
+        series: buildProgressSeries(sessions),
+        stagnant: isStagnantHistory(sessions),
+    };
 }
 
 /**

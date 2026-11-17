@@ -9,6 +9,7 @@ import {
     hasRoutines,
     isDayLocked,
     loadDayData,
+    loadExerciseHistory,
     loadRestorableSession,
     loadPersonalBests,
     loadStagnantExercises,
@@ -220,6 +221,56 @@ describe("loadStagnantExercises", () => {
         await repos.workoutLogs.save(failedLog("l4", "2026-01-09", "u2"));
         expect([...(await loadStagnantExercises(repos, "u1"))]).toEqual(["bench-press"]);
         expect((await loadStagnantExercises(repos, "u2")).size).toBe(0);
+    });
+});
+
+describe("loadExerciseHistory", () => {
+    it("builds the history, record and series of one exercise from the user's logs only", async () => {
+        await repos.workoutLogs.save(log("l1", "2026-01-02", 60));
+        await repos.workoutLogs.save(log("l2", "2026-01-09", 70));
+        await repos.workoutLogs.save(log("l3", "2026-01-10", 200, "u2"));
+        const history = await loadExerciseHistory(repos, "u1", "bench-press");
+        expect(history.name).toBe("Press banca");
+        expect(history.sessions.map((s) => s.bestWeight)).toEqual([60, 70]);
+        expect(history.record).toEqual({ weight: 70, reps: 5, date: "2026-01-09" });
+        expect(history.series.points).toEqual([
+            { date: "2026-01-02", value: 60 },
+            { date: "2026-01-09", value: 70 },
+        ]);
+        expect(history.stagnant).toBe(false);
+    });
+
+    it("flags a stagnant exercise", async () => {
+        for (const [id, date] of [["l1", "2026-01-01"], ["l2", "2026-01-04"], ["l3", "2026-01-08"]]) {
+            const base = log(id, date, 60);
+            await repos.workoutLogs.save({
+                ...base,
+                exercises: base.exercises.map((e) => ({ ...e, status: "failed" as const })),
+            });
+        }
+        expect((await loadExerciseHistory(repos, "u1", "bench-press")).stagnant).toBe(true);
+    });
+
+    it("names a catalog exercise without history from the catalog", async () => {
+        const history = await loadExerciseHistory(repos, "u1", "back-squat");
+        expect(history.name).toBe("Sentadilla con barra");
+        expect(history.sessions).toEqual([]);
+        expect(history.record).toBeNull();
+    });
+
+    it("names a custom exercise without history from the local exercise", async () => {
+        const created = await repos.customExercises.create("u1", {
+            name: "Remo en anillas",
+            muscleGroup: "back",
+            isBodyweight: true,
+        });
+        const history = await loadExerciseHistory(repos, "u1", created.id);
+        expect(history.name).toBe("Remo en anillas");
+        expect(history.isBodyweight).toBe(true);
+    });
+
+    it("falls back to the key for an unknown exercise", async () => {
+        expect((await loadExerciseHistory(repos, "u1", "unknown-key")).name).toBe("unknown-key");
     });
 });
 
