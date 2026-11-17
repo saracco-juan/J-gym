@@ -93,3 +93,20 @@ export function applySwap(overrides: DayOverrides, a: string, b: string): Record
     set(b, aName);
     return next;
 }
+
+export type ResetInput = Pick<SwapInput, "today" | "overrides" | "loggedDates" | "sessionDate">;
+
+/**
+ * Why the swaps of this week cannot be undone, or null when they can. A
+ * swapped day that is past, logged or being trained today keeps its routine,
+ * so resetting only part of a swap would leave a routine twice in the week.
+ */
+export function resetBlock(input: ResetInput): SwapBlockReason | null {
+    const { today, overrides, loggedDates, sessionDate } = input;
+    const week = currentWeekDates(today);
+    const dates = Object.keys(overrides).filter((d) => week.includes(d));
+    if (dates.some((d) => isPastDate(d, today))) return "past";
+    if (dates.some((d) => loggedDates.has(d))) return "logged";
+    if (sessionDate === today && dates.includes(today)) return "session-in-progress";
+    return null;
+}

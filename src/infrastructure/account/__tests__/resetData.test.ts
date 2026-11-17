@@ -86,6 +86,16 @@ describe("resetOwnData", () => {
         expect(stored?.stats.streak).toBe(0);
     });
 
+    it("removes the week day swaps of the user only", async () => {
+        const week = ["2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09", "2026-01-10", "2026-01-11"];
+        const swap = { "2026-01-05": "martes", "2026-01-06": "lunes" };
+        await repos.dayOverrides.replaceWeek("u1", week, swap);
+        await repos.dayOverrides.replaceWeek("u2", week, swap);
+        await resetOwnData(repos, { userId: "u1", today: "2026-01-05", registered: false });
+        expect(await repos.dayOverrides.listForRange("u1", week[0], week[6])).toEqual([]);
+        expect(await repos.dayOverrides.listForRange("u2", week[0], week[6])).toHaveLength(2);
+    });
+
     it("publishes no stats for an anonymous account", async () => {
         await seed("u1");
         await resetOwnData(repos, { userId: "u1", today: "2026-01-05", registered: false });

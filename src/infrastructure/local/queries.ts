@@ -7,7 +7,16 @@
 import { getCatalogExercise } from "@/core/catalog";
 import type { IRoutineExercise, IRoutineTemplate, IWorkoutLog } from "@/core/domain";
 import { resolveDayView, type DayViewAction } from "@/core/dashboard";
-import { dayNameForDate } from "@/core/schedule";
+import {
+    applySwap,
+    currentWeekDates,
+    dayNameForDate,
+    effectiveDayName,
+    resetBlock,
+    swapBlock,
+    type SwapBlockReason,
+    type SwapInput,
+} from "@/core/schedule";
 import { finalizeSession, type FinalizeResult, type SessionState } from "@/core/session";
 import type { IOverloadStrategy } from "@/core/strategies";
 import {
@@ -21,12 +30,19 @@ import {
     type ProgressSeries,
 } from "@/core/progress";
 import type { RoutineSavePlan } from "@/core/routine";
+import { scheduledWeekdays } from "@/core/stats/training-days";
 import { computePersonalBests } from "@/core/use-cases";
 import type { ActiveSessionRecord } from "./db";
 import type { LocalRepositories } from "./localRepositories";
 
 export type DayDataResult =
-    | { type: "template"; data: IRoutineTemplate; action: DayViewAction }
+    | {
+          type: "template";
+          data: IRoutineTemplate;
+          action: DayViewAction;
+          /** True when the date shows another weekday's routine this week. */
+          swapped: boolean;
+      }
     | { type: "log"; data: IWorkoutLog }
     | { type: "empty"; data: null }
     | { type: "error"; error: string };
@@ -53,8 +69,10 @@ export async function loadDayData(
 ): Promise<DayDataResult> {
     try {
         const isFuture = dateStr > todayStr;
+        const [override] = await repos.dayOverrides.listForRange(userId, dateStr, dateStr);
+        const dayName = override?.dayName ?? dayNameForDate(dateStr);
         const [plan, log, saved] = await Promise.all([
-            repos.routines.getByDay(userId, dayNameForDate(dateStr)),
+            repos.routines.getByDay(userId, dayName),
             // Future days cannot have a log yet.
             isFuture ? undefined : repos.workoutLogs.getByDate(userId, dateStr),
             dateStr === todayStr
@@ -74,7 +92,12 @@ export async function loadDayData(
 
         if (view.kind === "log" && log) return { type: "log", data: log };
         if (view.kind === "template" && plan) {
-            return { type: "template", data: plan, action: view.action };
+            return {
+                type: "template",
+                data: plan,
+                action: view.action,
+                swapped: dayName !== dayNameForDate(dateStr),
+            };
         }
         return { type: "empty", data: null };
     } catch {
@@ -232,6 +255,7 @@ export async function resetUserData(repos: LocalRepositories, userId: string): P
         await repos.customExercises.remove(ex.id);
     }
     await repos.activeSession.clear(userId);
+    await repos.dayOverrides.clearUser(userId);
 }
 
 export interface FinishWorkoutInput {
@@ -279,4 +303,107 @@ export async function finishWorkoutLocally(
     });
     await repos.workoutLogs.commitWorkout(input.userId, result.log, result.updatedRoutine);
     return result;
+}
+
+// ─── Week day swap ─────────────────────────────────────────────────
+
+export interface WeekPlanDay {
+    /** YYYY-MM-DD. */
+    date: string;
+    /** Weekday of the date. */
+    naturalDayName: string;
+    /** Weekday whose routine the date shows (differs when swapped). */
+    dayName: string;
+    /** Exercises of the routine shown; 0 for a rest day. */
+    exerciseCount: number;
+    logged: boolean;
+    swapped: boolean;
+    isToday: boolean;
+    isPast: boolean;
+}
+
+export interface WeekPlan {
+    today: string;
+    days: WeekPlanDay[];
+    hasSwaps: boolean;
+    /** Why "reset week" is not allowed now, or null. */
+    resetBlocked: SwapBlockReason | null;
+    /** Everything `swapBlock` needs besides the two dates. */
+    swapContext: Omit<SwapInput, "a" | "b">;
+}
+
+export type SwapResult = { ok: true } | { ok: false; reason: SwapBlockReason };
+
+/** The current week (Monday to Sunday) with each date's routine and swap state. */
+export async function loadWeekPlan(
+    repos: LocalRepositories,
+    userId: string,
+    today: string
+): Promise<WeekPlan> {
+    const week = currentWeekDates(today);
+    const [rows, templates, logs, saved] = await Promise.all([
+        repos.dayOverrides.listForRange(userId, week[0], week[6]),
+        repos.routines.listByUser(userId),
+        repos.workoutLogs.listByUser(userId),
+        repos.activeSession.get(userId).catch(() => undefined),
+    ]);
+    const overrides = Object.fromEntries(rows.map((r) => [r.date, r.dayName]));
+    const loggedDates = new Set(logs.map((l) => l.date).filter((d) => week.includes(d)));
+    const swapContext: Omit<SwapInput, "a" | "b"> = {
+        today,
+        overrides,
+        loggedDates,
+        trainingWeekdays: scheduledWeekdays(templates),
+        sessionDate: saved?.meta?.date ?? null,
+    };
+    const days = week.map((date): WeekPlanDay => {
+        const naturalDayName = dayNameForDate(date);
+        const dayName = effectiveDayName(date, overrides);
+        const routine = templates.find((t) => t.dayName.trim().toLowerCase() === dayName);
+        return {
+            date,
+            naturalDayName,
+            dayName,
+            exerciseCount: routine?.exercises.length ?? 0,
+            logged: loggedDates.has(date),
+            swapped: dayName !== naturalDayName,
+            isToday: date === today,
+            isPast: date < today,
+        };
+    });
+    return {
+        today,
+        days,
+        hasSwaps: days.some((d) => d.swapped),
+        resetBlocked: resetBlock(swapContext),
+        swapContext,
+    };
+}
+
+/** Swaps the routines shown on `a` and `b` this week, after checking `swapBlock`. */
+export async function swapDays(
+    repos: LocalRepositories,
+    userId: string,
+    today: string,
+    a: string,
+    b: string
+): Promise<SwapResult> {
+    const { swapContext } = await loadWeekPlan(repos, userId, today);
+    const reason = swapBlock({ ...swapContext, a, b });
+    if (reason) return { ok: false, reason };
+    const next = applySwap(swapContext.overrides, a, b);
+    await repos.dayOverrides.replaceWeek(userId, currentWeekDates(today), next);
+    return { ok: true };
+}
+
+/** Undoes every swap of this week, after checking `resetBlock`. */
+export async function resetWeek(
+    repos: LocalRepositories,
+    userId: string,
+    today: string
+): Promise<SwapResult> {
+    const { resetBlocked } = await loadWeekPlan(repos, userId, today);
+    if (resetBlocked) return { ok: false, reason: resetBlocked };
+    await repos.dayOverrides.replaceWeek(userId, currentWeekDates(today), {});
+    return { ok: true };
 }

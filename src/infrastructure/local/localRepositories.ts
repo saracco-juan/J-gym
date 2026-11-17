@@ -27,6 +27,7 @@ import {
     getDb,
     type ActiveSessionMeta,
     type ActiveSessionRecord,
+    type DayOverrideRecord,
     type JgymDatabase,
     type ProfileRejection,
     type StoredCustomExercise,
@@ -251,6 +252,40 @@ export function createLocalRepositories(
         },
     };
 
+    /** Swapped days of the current week: local only, never synced (no outbox entry). */
+    const dayOverrides = {
+        /** Overrides of the user between `from` and `to` (YYYY-MM-DD, inclusive). */
+        listForRange: (userId: string, from: string, to: string): Promise<DayOverrideRecord[]> =>
+            db.dayOverrides
+                .where("[userId+date]")
+                .between([userId, from], [userId, to], true, true)
+                .toArray(),
+        /**
+         * Replaces the overrides of the week (`weekDates`, Monday first) with
+         * `overrides` (date -> weekday name, dates outside the week ignored) and
+         * drops the rows of earlier weeks.
+         */
+        async replaceWeek(
+            userId: string,
+            weekDates: readonly string[],
+            overrides: Readonly<Record<string, string>>
+        ): Promise<void> {
+            const rows: DayOverrideRecord[] = weekDates
+                .filter((date) => overrides[date] !== undefined)
+                .map((date) => ({ userId, date, dayName: overrides[date] }));
+            await db.transaction("rw", db.dayOverrides, async () => {
+                await db.dayOverrides
+                    .where("[userId+date]")
+                    .between([userId, ""], [userId, weekDates[weekDates.length - 1]], true, true)
+                    .delete();
+                await db.dayOverrides.bulkPut(rows);
+            });
+        },
+        async clearUser(userId: string): Promise<void> {
+            await db.dayOverrides.where("userId").equals(userId).delete();
+        },
+    };
+
     const meta = {
         async get<T = unknown>(key: string): Promise<T | undefined> {
             return (await db.meta.get(key))?.value as T | undefined;
@@ -396,6 +431,7 @@ export function createLocalRepositories(
                 db.meta,
                 db.outbox,
                 db.profiles,
+                db.dayOverrides,
             ];
             await db.transaction("rw", all, async () => {
                 await Promise.all(all.map((t) => t.clear()));
@@ -403,7 +439,18 @@ export function createLocalRepositories(
         },
     };
 
-    return { routines, customExercises, workoutLogs, profiles, stats, activeSession, meta, outbox, sync };
+    return {
+        routines,
+        customExercises,
+        workoutLogs,
+        profiles,
+        stats,
+        activeSession,
+        dayOverrides,
+        meta,
+        outbox,
+        sync,
+    };
 }
 
 export type LocalRepositories = ReturnType<typeof createLocalRepositories>;

@@ -7,7 +7,7 @@
  * (e.g. during SSR), so importing this module on the server is harmless.
  */
 
-import Dexie, { type EntityTable } from "dexie";
+import Dexie, { type EntityTable, type Table } from "dexie";
 import type { CustomExercise } from "@/core/catalog";
 import type { IProfile, IRoutineTemplate, IWorkoutLog } from "@/core/domain";
 import type { SessionState } from "@/core/session";
@@ -52,6 +52,18 @@ export interface ProfileRejection {
     reason: "name-taken";
 }
 
+/**
+ * A swapped day of the current week: `date` shows the routine of `dayName`.
+ * Local only, never synced.
+ */
+export interface DayOverrideRecord {
+    userId: string;
+    /** YYYY-MM-DD. */
+    date: string;
+    /** Weekday name whose routine the date shows. */
+    dayName: string;
+}
+
 export class JgymDatabase extends Dexie {
     routines!: EntityTable<IRoutineTemplate, "id">;
     customExercises!: EntityTable<StoredCustomExercise, "id">;
@@ -60,6 +72,7 @@ export class JgymDatabase extends Dexie {
     meta!: EntityTable<MetaRecord, "key">;
     outbox!: EntityTable<OutboxEntry, "id">;
     profiles!: EntityTable<IProfile, "userId">;
+    dayOverrides!: Table<DayOverrideRecord, [string, string]>;
 
     constructor(name = "jgym") {
         super(name);
@@ -74,6 +87,10 @@ export class JgymDatabase extends Dexie {
         // v2: the own profile (display name and avatar color), one row per user.
         this.version(2).stores({
             profiles: "userId",
+        });
+        // v3: swapped days of the current week (local only).
+        this.version(3).stores({
+            dayOverrides: "[userId+date], userId",
         });
     }
 }

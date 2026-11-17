@@ -2,6 +2,7 @@ import {
     applySwap,
     currentWeekDates,
     effectiveDayName,
+    resetBlock,
     swapBlock,
     type SwapInput,
 } from "../week-swap";
@@ -133,5 +134,35 @@ describe("swapBlock", () => {
 
     it("ignores a stale session from another date", () => {
         expect(swapBlock({ ...base, sessionDate: "2026-11-16" })).toBeNull();
+    });
+});
+
+describe("resetBlock", () => {
+    const swapped = { "2026-11-17": "miércoles", "2026-11-18": "martes" };
+    const base = {
+        today: "2026-11-17",
+        overrides: swapped,
+        loggedDates: new Set<string>(),
+        sessionDate: null,
+    };
+
+    it("allows resetting future, unlogged swaps", () => {
+        expect(resetBlock(base)).toBeNull();
+    });
+
+    it("blocks when a swapped day is already past", () => {
+        expect(resetBlock({ ...base, today: "2026-11-18" })).toBe("past");
+    });
+
+    it("blocks when a swapped day is logged", () => {
+        expect(resetBlock({ ...base, loggedDates: new Set(["2026-11-18"]) })).toBe("logged");
+    });
+
+    it("blocks when today is swapped and a session dated today is active", () => {
+        expect(resetBlock({ ...base, sessionDate: "2026-11-17" })).toBe("session-in-progress");
+    });
+
+    it("ignores overrides of other weeks", () => {
+        expect(resetBlock({ ...base, overrides: { "2026-11-10": "martes" } })).toBeNull();
     });
 });
