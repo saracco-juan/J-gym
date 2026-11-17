@@ -63,44 +63,43 @@ export default function LoginView() {
     }, [router]);
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen px-6 bg-zinc-950">
+        <div className="flex min-h-dvh flex-col items-center justify-center bg-surface-base px-4">
             {/* Logo */}
-            <div className="flex flex-col items-center gap-3 mb-10">
-                <div className="w-20 h-20 rounded-3xl bg-emerald-600 flex items-center justify-center text-4xl shadow-lg shadow-emerald-900/40">
-                    <Barbell size={36} className="text-white" />
+            <div className="mb-8 flex flex-col items-center gap-3">
+                <div className="flex size-20 items-center justify-center rounded-3xl bg-accent">
+                    <Barbell size={40} weight="bold" className="text-text-primary" />
                 </div>
-                <h1 className="text-3xl font-bold text-white">J-GYM</h1>
-                <p className="text-sm text-zinc-500">Sobrecarga Progresiva</p>
+                <h1 className="heading-4 text-text-primary">J-GYM</h1>
+                <p className="body-6 text-text-muted">Sobrecarga progresiva</p>
             </div>
 
             {/* Card */}
-            <div className="w-full max-w-sm rounded-2xl bg-zinc-900 border border-zinc-800 p-6">
+            <div className="w-full max-w-sm rounded-2xl border border-surface-border bg-surface-raised p-6">
                 {state === "success" ? (
-                    <div className="flex flex-col items-center gap-3 py-4">
-                        <div className="w-14 h-14 rounded-2xl bg-emerald-600/20 flex items-center justify-center text-3xl">
-                            <Envelope size={28} className="text-emerald-400" />
+                    <div className="flex flex-col items-center gap-3 py-2">
+                        <div className="flex size-16 items-center justify-center rounded-xl bg-accent-soft">
+                            <Envelope size={32} weight="bold" className="text-accent-text" />
                         </div>
-                        <h2 className="text-lg font-bold text-white text-center">
-                            ¡Revisá tu correo!
+                        <h2 className="heading-6 text-center text-text-primary">
+                            Revisá tu correo
                         </h2>
-                        <p className="text-sm text-zinc-400 text-center">
+                        <p className="body-6 text-center text-text-secondary">
                             Te enviamos un link mágico a{" "}
-                            <span className="font-semibold text-white">{email}</span>.
+                            <span className="body-4 break-all text-text-primary">{email}</span>.
                             Hacé click para ingresar.
                         </p>
                         <button
+                            type="button"
                             onClick={() => { setState("idle"); setEmail(""); }}
-                            className="mt-2 text-sm text-emerald-400 hover:text-emerald-300"
+                            className="btn mt-2 w-full text-accent-text hover:enabled:bg-surface-strong"
                         >
                             Usar otro email
                         </button>
                     </div>
                 ) : (
                     <>
-                        <h2 className="text-lg font-bold text-white mb-1">
-                            Iniciar Sesión
-                        </h2>
-                        <p className="text-sm text-zinc-500 mb-5">
+                        <h2 className="heading-6 mb-1 text-text-primary">Iniciar sesión</h2>
+                        <p className="body-6 mb-4 text-text-muted">
                             Accedé con tu email, sin contraseña.
                         </p>
 
@@ -114,49 +113,40 @@ export default function LoginView() {
                             onChange={(e) => setEmail(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleMagicLink()}
                             disabled={isBusy}
-                            className="w-full h-14 rounded-xl bg-zinc-800 border border-zinc-700 px-4 text-base text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:opacity-50"
+                            className="field"
                             aria-label="Email para magic link"
+                            aria-invalid={state === "error" && errorMsg !== ""}
                         />
 
                         {state === "error" && errorMsg && (
-                            <p className="mt-2 text-sm text-red-400">{errorMsg}</p>
+                            <p role="alert" className="body-6 mt-2 text-danger-text">{errorMsg}</p>
                         )}
 
                         <button
+                            type="button"
                             onClick={handleMagicLink}
                             disabled={isBusy || !email.trim()}
-                            className="w-full h-14 mt-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] font-bold text-white text-base transition-all disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed"
+                            aria-busy={state === "sending-link"}
+                            className="btn-primary mt-4 w-full"
                         >
-                            {state === "sending-link" ? (
-                                <span className="flex items-center justify-center gap-2">
-                                    <span className="h-4 w-4 rounded-full border-2 border-zinc-400 border-t-transparent animate-spin" />
-                                    Enviando...
-                                </span>
-                            ) : (
-                                "Enviar Magic Link"
-                            )}
+                            {state === "sending-link" ? "Enviando…" : "Enviar magic link"}
                         </button>
 
                         {/* Demo */}
                         <button
+                            type="button"
                             onClick={handleDemo}
                             disabled={isBusy}
-                            className="w-full h-14 mt-3 rounded-xl border border-zinc-700 hover:bg-zinc-800 active:scale-[0.98] font-semibold text-zinc-300 text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-busy={state === "starting-demo"}
+                            className="btn-secondary mt-3 w-full"
                         >
-                            {state === "starting-demo" ? (
-                                <span className="flex items-center justify-center gap-2">
-                                    <span className="h-4 w-4 rounded-full border-2 border-zinc-400 border-t-transparent animate-spin" />
-                                    Iniciando demo...
-                                </span>
-                            ) : (
-                                "Probar demo sin registrarte"
-                            )}
+                            {state === "starting-demo" ? "Iniciando demo…" : "Probar demo sin registrarte"}
                         </button>
                     </>
                 )}
             </div>
 
-            <p className="mt-8 text-xs text-zinc-600">
+            <p className="caption-5 mt-6 text-center text-text-muted">
                 Tu sesión se mantiene activa automáticamente.
             </p>
         </div>

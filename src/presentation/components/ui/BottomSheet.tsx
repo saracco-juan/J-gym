@@ -72,7 +72,7 @@ export default function BottomSheet({ title, onClose, children, tall = false }: 
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
             <div
-                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                className="absolute inset-0 bg-surface-base/80 backdrop-blur-sm"
                 onClick={onClose}
                 aria-hidden="true"
             />
@@ -82,24 +82,24 @@ export default function BottomSheet({ title, onClose, children, tall = false }: 
                 aria-modal="true"
                 aria-labelledby={titleId}
                 tabIndex={-1}
-                className={`relative flex w-full max-w-md flex-col rounded-t-2xl border border-zinc-700 bg-zinc-900 shadow-2xl outline-none sm:rounded-2xl ${
+                className={`relative flex w-full max-w-md flex-col rounded-t-2xl border border-surface-border bg-surface-raised outline-none sm:rounded-2xl ${
                     tall ? "h-[85dvh]" : "max-h-[85dvh]"
                 }`}
             >
-                <div className="flex items-center justify-between gap-2 px-5 pt-4 pb-2">
-                    <h2 id={titleId} className="text-lg font-bold text-white">
+                <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-2">
+                    <h2 id={titleId} className="heading-6 text-text-primary">
                         {title}
                     </h2>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                        className="btn-icon"
                         aria-label="Cerrar"
                     >
-                        <X size={20} />
+                        <X size={24} weight="bold" />
                     </button>
                 </div>
-                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                     {children}
                 </div>
             </div>
