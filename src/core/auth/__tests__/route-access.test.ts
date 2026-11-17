@@ -8,6 +8,8 @@ describe("classifyRoute", () => {
         ["/workout/abc", "protected"],
         ["/onboarding", "protected"],
         ["/history", "protected"],
+        ["/routine", "protected"],
+        ["/routine/edit", "protected"],
         ["/login", "auth"],
         ["/login/reset", "auth"],
         ["/", "root"],

@@ -8,27 +8,13 @@
  */
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft } from "@phosphor-icons/react";
+import { useSearchParams } from "next/navigation";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
 import { loadExerciseHistory, type ExerciseHistoryResult } from "@/infrastructure/local/queries";
+import BackButton from "@/presentation/components/ui/BackButton";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 import HistoryContent from "./HistoryContent";
 import HistorySkeleton from "./HistorySkeleton";
-
-function BackButton() {
-    const router = useRouter();
-    return (
-        <button
-            type="button"
-            onClick={() => (window.history.length > 1 ? router.back() : router.push("/dashboard"))}
-            className="btn-icon -ml-3"
-            aria-label="Volver"
-        >
-            <ArrowLeft size={24} weight="bold" />
-        </button>
-    );
-}
 
 function HistoryScreen() {
     const searchParams = useSearchParams();

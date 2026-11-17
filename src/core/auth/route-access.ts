@@ -6,7 +6,7 @@
 
 export type RouteKind = "protected" | "auth" | "root" | "public";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/workout", "/onboarding", "/history"];
+const PROTECTED_PREFIXES = ["/dashboard", "/workout", "/onboarding", "/history", "/routine"];
 const AUTH_PREFIXES = ["/login"];
 
 const matchesPrefix = (pathname: string, prefix: string) =>
