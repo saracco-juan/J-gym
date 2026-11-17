@@ -2,7 +2,7 @@
 /// <reference lib="webworker" />
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, RuntimeCaching, SerwistGlobalConfig } from "serwist";
-import { ExpirationPlugin, NetworkFirst, Serwist } from "serwist";
+import { ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist } from "serwist";
 
 declare global {
     interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -35,6 +35,16 @@ const skipRedirects = {
 
 const expiration = () =>
     new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 7 * 24 * 60 * 60 });
+
+/**
+ * Supabase API calls (auth, REST) are never cached. User data already lives
+ * in IndexedDB, and a cached API response could outlive a sign-out or feed
+ * stale rows to the sync engine.
+ */
+const supabaseBypass: RuntimeCaching = {
+    matcher: ({ url }) => url.hostname.endsWith(".supabase.co"),
+    handler: new NetworkOnly(),
+};
 
 const appShellCaching: RuntimeCaching[] = [
     // Hard loads: the HTML document of an app route. Also matches the
@@ -90,7 +100,7 @@ const serwist = new Serwist({
     skipWaiting: true,
     clientsClaim: true,
     navigationPreload: true,
-    runtimeCaching: [...appShellCaching, ...defaultCache],
+    runtimeCaching: [supabaseBypass, ...appShellCaching, ...defaultCache],
     fallbacks: {
         entries: [
             {
