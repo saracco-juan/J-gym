@@ -9,7 +9,7 @@
  */
 
 import { Check } from "@phosphor-icons/react";
-import { formatSetValue } from "@/core/session";
+import { formatSetTarget, formatSetValue } from "@/core/session";
 
 interface SetRowProps {
     setNumber: number;
@@ -32,6 +32,8 @@ export default function SetRow({
 }: SetRowProps) {
     const hasTarget = targetReps > 0 && (isBodyweight || targetWeight > 0);
     const targetText = hasTarget ? formatSetValue(targetReps, targetWeight, isBodyweight) : null;
+    // Partial target (reps without weight yet) is shown but cannot be logged in one tap.
+    const plannedText = formatSetTarget(targetReps, targetWeight, isBodyweight);
     const loggedText = logged ? formatSetValue(logged.reps, logged.weight, isBodyweight) : null;
     const differs = logged !== null && targetText !== null && loggedText !== targetText;
 
@@ -56,13 +58,15 @@ export default function SetRow({
                         logged ? "text-accent-text" : hasTarget ? "text-text-primary" : "text-text-muted"
                     }`}
                 >
-                    {loggedText ?? targetText ?? "Sin objetivo"}
+                    {loggedText ?? plannedText ?? "Sin objetivo"}
                 </span>
                 {differs && targetText && (
                     <span className="caption-5 text-text-muted">Objetivo {targetText}</span>
                 )}
                 {!logged && !hasTarget && (
-                    <span className="caption-5 text-text-muted">Tocá para ingresar</span>
+                    <span className="caption-5 text-text-muted">
+                        {plannedText ? "Tocá para cargar el peso" : "Tocá para ingresar"}
+                    </span>
                 )}
             </button>
 
