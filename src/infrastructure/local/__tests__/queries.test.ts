@@ -13,7 +13,9 @@ import {
     loadRestorableSession,
     loadPersonalBests,
     loadStagnantExercises,
+    loadRoutineEditor,
     resetUserData,
+    saveRoutineEdits,
     saveWeeklyRoutine,
 } from "../queries";
 
@@ -271,6 +273,69 @@ describe("loadExerciseHistory", () => {
 
     it("falls back to the key for an unknown exercise", async () => {
         expect((await loadExerciseHistory(repos, "u1", "unknown-key")).name).toBe("unknown-key");
+    });
+});
+
+describe("loadRoutineEditor", () => {
+    it("returns the user's routines and the template of the in-progress session", async () => {
+        await repos.routines.save(monday);
+        await repos.routines.save({ ...monday, id: "r9", userId: "u2" });
+        await repos.activeSession.put("u1", createSession([bench]), {
+            templateId: "r1",
+            dayName: "lunes",
+            date: "2026-01-05",
+            startedAt: 1000,
+            logId: "l-1",
+        });
+        const editor = await loadRoutineEditor(repos, "u1");
+        expect(editor.templates.map((t) => t.id)).toEqual(["r1"]);
+        expect(editor.activeTemplateId).toBe("r1");
+    });
+
+    it("has no active template without a saved session", async () => {
+        await repos.routines.save(monday);
+        expect((await loadRoutineEditor(repos, "u1")).activeTemplateId).toBeNull();
+    });
+});
+
+describe("saveRoutineEdits", () => {
+    const tuesday: IRoutineTemplate = { id: "r2", userId: "u1", dayName: "martes", exercises: [bench] };
+
+    it("writes upserts and deletes locally and enqueues each one for sync", async () => {
+        await repos.routines.save(monday);
+        await repos.routines.save(tuesday);
+        for (const entry of await repos.outbox.list()) await repos.outbox.complete(entry.id);
+
+        const edited = { ...monday, exercises: [{ ...bench, sets: [{ setNumber: 1, targetReps: 10, targetWeight: 62.5 }] }] };
+        await saveRoutineEdits(repos, { upserts: [edited], deletes: ["r2"] });
+
+        expect(await repos.routines.get("r1")).toEqual(edited);
+        expect(await repos.routines.get("r2")).toBeUndefined();
+        const queued = (await repos.outbox.list()).map((e) => `${e.entity}:${e.entityId}:${e.op}`).sort();
+        expect(queued).toEqual(["routine:r1:upsert", "routine:r2:delete"]);
+    });
+
+    it("leaves past logs and the in-progress session untouched", async () => {
+        await repos.routines.save(monday);
+        await repos.workoutLogs.save(log("l1", "2026-01-02", 60));
+        const state = createSession([bench]);
+        await repos.activeSession.put("u1", state, {
+            templateId: "r1",
+            dayName: "lunes",
+            date: "2026-01-05",
+            startedAt: 1000,
+            logId: "l-2",
+        });
+
+        await saveRoutineEdits(repos, { upserts: [{ ...monday, exercises: [] }], deletes: [] });
+
+        expect(await repos.workoutLogs.get("l1")).toEqual(log("l1", "2026-01-02", 60));
+        expect((await repos.activeSession.get("u1"))?.state).toEqual(state);
+    });
+
+    it("does nothing for an empty plan", async () => {
+        await saveRoutineEdits(repos, { upserts: [], deletes: [] });
+        expect(await repos.outbox.count()).toBe(0);
     });
 });
 

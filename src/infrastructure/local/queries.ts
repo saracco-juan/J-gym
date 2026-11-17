@@ -20,6 +20,7 @@ import {
     type PersonalRecord,
     type ProgressSeries,
 } from "@/core/progress";
+import type { RoutineSavePlan } from "@/core/routine";
 import { computePersonalBests } from "@/core/use-cases";
 import type { ActiveSessionRecord } from "./db";
 import type { LocalRepositories } from "./localRepositories";
@@ -187,6 +188,36 @@ export async function saveWeeklyRoutine(
             exercises: tmpl.exercises,
         });
     }
+}
+
+export interface RoutineEditorData {
+    templates: IRoutineTemplate[];
+    /** Routine of the unfinished session, if any: its day must not be deleted. */
+    activeTemplateId: string | null;
+}
+
+/** What the routine editor starts from, all local. */
+export async function loadRoutineEditor(
+    repos: LocalRepositories,
+    userId: string
+): Promise<RoutineEditorData> {
+    const [templates, saved] = await Promise.all([
+        repos.routines.listByUser(userId),
+        repos.activeSession.get(userId).catch(() => undefined),
+    ]);
+    return { templates, activeTemplateId: saved?.meta?.templateId ?? null };
+}
+
+/**
+ * Routine editor save: writes each change locally and enqueues it, deletes
+ * first. Logs and the in-progress session are never touched.
+ */
+export async function saveRoutineEdits(
+    repos: LocalRepositories,
+    plan: RoutineSavePlan
+): Promise<void> {
+    for (const id of plan.deletes) await repos.routines.remove(id);
+    for (const routine of plan.upserts) await repos.routines.save(routine);
 }
 
 /** Dev reset: removes the user's data locally and queues the deletes for the server. */
