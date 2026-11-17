@@ -172,3 +172,19 @@ describe("markSucceeded", () => {
         expect(markSucceeded(second, "old")).toEqual(second);
     });
 });
+
+describe("stats entity", () => {
+    it("sends the stats after the profile, which the server needs to exist first", () => {
+        const stats = entry({ id: "s", entity: "stats", entityId: "u1", createdAt: 1 });
+        const profile = entry({ id: "p", entity: "profile", entityId: "u1", createdAt: 50 });
+        const log = entry({ id: "l", entity: "workoutLog", entityId: "l1", createdAt: 99 });
+        expect(nextBatch([stats, log, profile], 1000).map((e) => e.id)).toEqual(["l", "p", "s"]);
+    });
+
+    it("coalesces snapshots so only the latest is pending", () => {
+        const first = enqueue([], input({ id: "s1", entity: "stats", entityId: "u1", payload: { n: 1 }, now: 10 }));
+        const second = enqueue(first, input({ id: "s2", entity: "stats", entityId: "u1", payload: { n: 2 }, now: 20 }));
+        expect(second).toHaveLength(1);
+        expect(second[0]).toMatchObject({ id: "s2", payload: { n: 2 }, createdAt: 10 });
+    });
+});

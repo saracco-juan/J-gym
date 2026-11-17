@@ -13,3 +13,4 @@ export type { TrainingStatus } from "./status";
 export { computeStreaks } from "./streak";
 export { computeUserStats } from "./user-stats";
 export type { UserStats, UserStatsInput } from "./user-stats";
+export type { PublicStats } from "./public-stats";
