@@ -163,6 +163,41 @@ describe("toSyncCommand", () => {
     });
 });
 
+describe("profile commands", () => {
+    const profile = { userId: "stale", displayName: "Juan", avatarColor: "#2563eb" };
+
+    it("upserts the profile keyed by user_id, owned by the session user", () => {
+        const cmd = toSyncCommand(
+            entry({ entity: "profile", entityId: "u1", op: "upsert", payload: profile }),
+            "u1",
+            "x"
+        );
+        expect(cmd).toEqual({
+            kind: "upsert",
+            table: "profiles",
+            onConflict: "user_id",
+            row: { user_id: "u1", display_name: "Juan", avatar_color: "#2563eb" },
+        });
+    });
+
+    it("never deletes a profile", () => {
+        expect(() =>
+            toSyncCommand(entry({ entity: "profile", entityId: "u1", op: "delete" }), "u1", "x")
+        ).toThrow(/never deleted/);
+    });
+
+    it("holds back a profile that belongs to another user", () => {
+        const other = entry({
+            entity: "profile",
+            entityId: "u9",
+            op: "upsert",
+            payload: { ...profile, userId: "u9" },
+        });
+        const plan = planFlush({ entries: [other], now: 1000, userId: "u1" });
+        expect(plan).toEqual({ kind: "send", batch: [] });
+    });
+});
+
 describe("detachTemplate", () => {
     it("nulls the template of a log upsert and refuses anything else", () => {
         const logCmd = toSyncCommand(entry({ entity: "workoutLog", entityId: "l1", op: "upsert", payload: log }), "u1", "x");

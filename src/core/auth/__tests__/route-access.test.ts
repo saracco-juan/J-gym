@@ -10,6 +10,8 @@ describe("classifyRoute", () => {
         ["/history", "protected"],
         ["/routine", "protected"],
         ["/routine/edit", "protected"],
+        ["/profile", "protected"],
+        ["/profile/edit", "protected"],
         ["/login", "auth"],
         ["/login/reset", "auth"],
         ["/", "root"],

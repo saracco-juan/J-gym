@@ -4,7 +4,7 @@
  * always injected so everything is deterministic.
  */
 
-export type OutboxEntity = "routine" | "customExercise" | "workoutLog";
+export type OutboxEntity = "routine" | "customExercise" | "workoutLog" | "profile";
 export type OutboxOp = "upsert" | "delete";
 
 export interface OutboxEntry {
@@ -31,11 +31,12 @@ export interface EnqueueInput {
     now: number;
 }
 
-/** Parents first: routines, then custom exercises, then logs. */
+/** Parents first: routines, then custom exercises, then logs, then the profile. */
 export const ENTITY_PRIORITY: Readonly<Record<OutboxEntity, number>> = {
     routine: 0,
     customExercise: 1,
     workoutLog: 2,
+    profile: 3,
 };
 
 export const BACKOFF_BASE_MS = 2_000;
