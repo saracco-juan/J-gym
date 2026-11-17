@@ -6,6 +6,11 @@ describe("custom exercise mapper", () => {
         expect(customExerciseFromRow(customExerciseToRow(ex))).toEqual(ex);
     });
 
+    it("round-trips a custom exercise in the cardio group", () => {
+        const ex = { id: "c2", userId: "u1", name: "Bicicleta", muscleGroup: "cardio" as const, isBodyweight: true };
+        expect(customExerciseFromRow(customExerciseToRow(ex))).toEqual(ex);
+    });
+
     it("writes deleted_at as null", () => {
         const row = customExerciseToRow({ id: "c1", userId: "u1", name: "X", muscleGroup: "core", isBodyweight: true });
         expect(row.deleted_at).toBeNull();

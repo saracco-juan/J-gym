@@ -5,14 +5,16 @@
  */
 
 import type { IRoutineExercise, IRoutineTemplate, IWorkoutLog } from "@/core/domain";
-import { dayNameForDate, isPastDate } from "@/core/schedule";
+import { resolveDayView, type DayViewAction } from "@/core/dashboard";
+import { dayNameForDate } from "@/core/schedule";
 import { finalizeSession, type FinalizeResult, type SessionState } from "@/core/session";
 import type { IOverloadStrategy } from "@/core/strategies";
 import { computePersonalBests } from "@/core/use-cases";
+import type { ActiveSessionRecord } from "./db";
 import type { LocalRepositories } from "./localRepositories";
 
 export type DayDataResult =
-    | { type: "template"; data: IRoutineTemplate }
+    | { type: "template"; data: IRoutineTemplate; action: DayViewAction }
     | { type: "log"; data: IWorkoutLog }
     | { type: "empty"; data: null }
     | { type: "error"; error: string };
@@ -26,7 +28,11 @@ export async function hasRoutines(repos: LocalRepositories, userId: string): Pro
     return (await repos.routines.listByUser(userId)).length > 0;
 }
 
-/** Past days show the logged workout; today and future days show the plan. */
+/**
+ * Past days show the logged workout; future days show the plan. Today shows
+ * the plan until its workout is logged, then the log (the day is locked).
+ * The view decision itself is the pure `resolveDayView`.
+ */
 export async function loadDayData(
     repos: LocalRepositories,
     userId: string,
@@ -34,15 +40,61 @@ export async function loadDayData(
     todayStr: string
 ): Promise<DayDataResult> {
     try {
-        if (isPastDate(dateStr, todayStr)) {
-            const log = await repos.workoutLogs.getByDate(userId, dateStr);
-            return log ? { type: "log", data: log } : { type: "empty", data: null };
+        const isFuture = dateStr > todayStr;
+        const [plan, log, saved] = await Promise.all([
+            repos.routines.getByDay(userId, dayNameForDate(dateStr)),
+            // Future days cannot have a log yet.
+            isFuture ? undefined : repos.workoutLogs.getByDate(userId, dateStr),
+            dateStr === todayStr
+                ? repos.activeSession.get(userId).catch(() => undefined)
+                : undefined,
+        ]);
+
+        const view = resolveDayView({
+            dateStr,
+            todayStr,
+            hasTemplate: !!plan,
+            hasLog: !!log,
+            // Only a session started today is resumable; an older one is stale.
+            hasActiveSession:
+                !!plan && saved?.meta?.templateId === plan.id && saved.meta.date === todayStr,
+        });
+
+        if (view.kind === "log" && log) return { type: "log", data: log };
+        if (view.kind === "template" && plan) {
+            return { type: "template", data: plan, action: view.action };
         }
-        const template = await repos.routines.getByDay(userId, dayNameForDate(dateStr));
-        return template ? { type: "template", data: template } : { type: "empty", data: null };
+        return { type: "empty", data: null };
     } catch {
         return { type: "error", error: "No se pudieron cargar los datos del día." };
     }
+}
+
+/** True when a workout is already logged for the date: that day is finished and locked. */
+export async function isDayLocked(
+    repos: LocalRepositories,
+    userId: string,
+    dateStr: string
+): Promise<boolean> {
+    return (await repos.workoutLogs.getByDate(userId, dateStr)) !== undefined;
+}
+
+/**
+ * The persisted session to restore, if any. A session whose day already has a
+ * log was finished (e.g. on another device, or reached again through back or a
+ * bookmark): it is discarded so the workout cannot be started a second time.
+ */
+export async function loadRestorableSession(
+    repos: LocalRepositories,
+    userId: string
+): Promise<ActiveSessionRecord | undefined> {
+    const record = await repos.activeSession.get(userId);
+    if (!record?.meta) return record;
+    if (await isDayLocked(repos, userId, record.meta.date)) {
+        await repos.activeSession.clear(userId);
+        return undefined;
+    }
+    return record;
 }
 
 /** Personal bests keyed by exercise id (see `computePersonalBests`). */

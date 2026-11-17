@@ -14,6 +14,7 @@ export const EXERCISE_CATALOG: readonly CatalogExercise[] = [
         muscleGroup: "legs",
         type: "compound",
         isBodyweight: false,
+        aliases: ["Sentadilla"],
         tipsEs: [
             "Mantén la espalda neutra y el abdomen firme durante todo el movimiento.",
             "Baja hasta que los muslos queden al menos paralelos al suelo.",
@@ -183,7 +184,7 @@ export const EXERCISE_CATALOG: readonly CatalogExercise[] = [
         muscleGroup: "chest",
         type: "compound",
         isBodyweight: false,
-        aliases: ["Press banca inclinado"],
+        aliases: ["Press banca inclinado", "Press inclinado en smith"],
         tipsEs: [
             "Usa una inclinación moderada, de entre 30 y 45 grados.",
             "Baja hacia la parte alta del pecho con control.",
@@ -366,7 +367,7 @@ export const EXERCISE_CATALOG: readonly CatalogExercise[] = [
         muscleGroup: "shoulders",
         type: "compound",
         isBodyweight: false,
-        aliases: ["Press militar c/máquina", "Press de hombros en máquina"],
+        aliases: ["Press militar c/máquina", "Press militar con máquina", "Press de hombros en máquina"],
         tipsEs: [
             "Ajusta el asiento para que las empuñaduras queden a la altura de los hombros.",
             "Empuja sin despegar la espalda del respaldo.",
@@ -379,6 +380,7 @@ export const EXERCISE_CATALOG: readonly CatalogExercise[] = [
         muscleGroup: "shoulders",
         type: "compound",
         isBodyweight: false,
+        aliases: ["Press militar con mancuerna"],
         tipsEs: [
             "Mantén los antebrazos verticales durante el recorrido.",
             "Empuja hacia arriba sin chocar las mancuernas.",
@@ -391,7 +393,7 @@ export const EXERCISE_CATALOG: readonly CatalogExercise[] = [
         muscleGroup: "shoulders",
         type: "isolation",
         isBodyweight: false,
-        aliases: ["Elevaciones laterales"],
+        aliases: ["Elevaciones laterales", "Vuelos laterales con mancuerna"],
         tipsEs: [
             "Eleva los brazos hasta la altura de los hombros con los codos levemente flexionados.",
             "Piensa en llevar los codos hacia arriba, no las manos.",
@@ -404,10 +406,23 @@ export const EXERCISE_CATALOG: readonly CatalogExercise[] = [
         muscleGroup: "shoulders",
         type: "isolation",
         isBodyweight: false,
+        aliases: ["Rear delt"],
         tipsEs: [
             "Inclínate hacia adelante con la espalda neutra.",
             "Abre los brazos hacia los costados, con los codos ligeramente flexionados.",
             "Evita usar el impulso del torso.",
+        ],
+    },
+    {
+        id: "cable-lateral-raise",
+        nameEs: "Vuelo lateral con polea",
+        muscleGroup: "shoulders",
+        type: "isolation",
+        isBodyweight: false,
+        tipsEs: [
+            "Coloca la polea baja del lado contrario y tira con el brazo más alejado.",
+            "Eleva el brazo hasta la altura del hombro con el codo levemente flexionado.",
+            "Mantén la tensión constante y baja de forma controlada sin balancear el torso.",
         ],
     },
     {
@@ -590,6 +605,23 @@ export const EXERCISE_CATALOG: readonly CatalogExercise[] = [
             "Arrodíllate y flexiona la columna llevando los codos hacia las rodillas.",
             "Mantén la cadera quieta durante todo el movimiento.",
             "Vuelve de forma controlada.",
+        ],
+    },
+    // ─── Cardio ────────────────────────────────────────────────────
+    {
+        id: "cardio",
+        nameEs: "Cardio",
+        muscleGroup: "cardio",
+        // "compound" is the closest valid type: cardio is a whole-body,
+        // multi-joint effort, not a single-joint isolation. The type is only
+        // descriptive today (no logic branches on it), so the union stays as is.
+        type: "compound",
+        // One tap logs it without a weight: there is no load to enter.
+        isBodyweight: true,
+        tipsEs: [
+            "Haz un calentamiento suave de unos minutos antes de subir el ritmo.",
+            "Elige una intensidad que te permita mantener una conversación corta.",
+            "Termina con un par de minutos a ritmo bajo para recuperarte.",
         ],
     },
 ];

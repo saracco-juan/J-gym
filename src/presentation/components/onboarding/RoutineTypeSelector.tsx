@@ -8,6 +8,7 @@
  */
 
 import { Dumbbell, Pencil } from "lucide-react";
+import { DEFAULT_ROUTINES } from "@/core/constants/defaultRoutines";
 
 interface RoutineTypeSelectorProps {
     selected: "default" | "custom" | null;
@@ -50,7 +51,7 @@ export default function RoutineTypeSelector({
                         </div>
                     </div>
                     <p className="text-sm text-zinc-400">
-                        Piernas/Hombros, Espalda/Bíceps, Pecho/Tríceps y más.
+                        {DEFAULT_ROUTINES[0].description}
                         Vos ponés tus marcas iniciales.
                     </p>
                 </button>

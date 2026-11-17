@@ -7,7 +7,9 @@ import { createLocalRepositories, type LocalRepositories } from "../localReposit
 import {
     finishWorkoutLocally,
     hasRoutines,
+    isDayLocked,
     loadDayData,
+    loadRestorableSession,
     loadPersonalBests,
     resetUserData,
     saveWeeklyRoutine,
@@ -86,6 +88,112 @@ describe("loadDayData", () => {
     it("does not leak another user's data", async () => {
         await repos.routines.save({ ...monday, userId: "u2" });
         expect((await loadDayData(repos, "u1", "2026-01-05", "2026-01-05")).type).toBe("empty");
+    });
+
+    it("offers to start today's routine, or resume it when a session is in progress", async () => {
+        await repos.routines.save(monday);
+        expect(await loadDayData(repos, "u1", "2026-01-05", "2026-01-05")).toMatchObject({
+            type: "template",
+            action: "start",
+        });
+        const session = createSession([bench]);
+        await repos.activeSession.put("u1", session, {
+            templateId: "r1",
+            dayName: "lunes",
+            date: "2026-01-05",
+            startedAt: 1,
+            logId: "l-active",
+        });
+        expect(await loadDayData(repos, "u1", "2026-01-05", "2026-01-05")).toMatchObject({
+            type: "template",
+            action: "resume",
+        });
+    });
+
+    it("does not resume a stale session started on another day", async () => {
+        await repos.routines.save(monday);
+        await repos.activeSession.put("u1", createSession([bench]), {
+            templateId: "r1",
+            dayName: "lunes",
+            date: "2026-01-04",
+            startedAt: 1,
+            logId: "l-stale",
+        });
+        expect(await loadDayData(repos, "u1", "2026-01-05", "2026-01-05")).toMatchObject({
+            type: "template",
+            action: "start",
+        });
+    });
+
+    it("marks future days with the future action", async () => {
+        await repos.routines.save(monday);
+        expect(await loadDayData(repos, "u1", "2026-01-12", "2026-01-05")).toMatchObject({
+            type: "template",
+            action: "future",
+        });
+    });
+
+    it("locks today once its workout is logged: the log wins over the template", async () => {
+        await repos.routines.save(monday);
+        await repos.workoutLogs.save(log("l-today", "2026-01-05", 60));
+        expect(await loadDayData(repos, "u1", "2026-01-05", "2026-01-05")).toMatchObject({
+            type: "log",
+            data: { id: "l-today" },
+        });
+    });
+
+    it("prefers the log over a stale active session for today", async () => {
+        await repos.routines.save(monday);
+        await repos.workoutLogs.save(log("l-today", "2026-01-05", 60));
+        await repos.activeSession.put("u1", createSession([bench]), {
+            templateId: "r1",
+            dayName: "lunes",
+            date: "2026-01-05",
+            startedAt: 1,
+            logId: "l-active",
+        });
+        expect((await loadDayData(repos, "u1", "2026-01-05", "2026-01-05")).type).toBe("log");
+    });
+
+    it("does not show another user's log for today", async () => {
+        await repos.routines.save(monday);
+        await repos.workoutLogs.save(log("l-other", "2026-01-05", 60, "u2"));
+        expect((await loadDayData(repos, "u1", "2026-01-05", "2026-01-05")).type).toBe("template");
+    });
+});
+
+describe("isDayLocked", () => {
+    it("is true only when the user has a log for that date", async () => {
+        await repos.workoutLogs.save(log("l1", "2026-01-05", 60));
+        expect(await isDayLocked(repos, "u1", "2026-01-05")).toBe(true);
+        expect(await isDayLocked(repos, "u1", "2026-01-06")).toBe(false);
+        expect(await isDayLocked(repos, "u2", "2026-01-05")).toBe(false);
+    });
+});
+
+describe("loadRestorableSession", () => {
+    const meta = (date: string) => ({
+        templateId: "r1",
+        dayName: "lunes",
+        date,
+        startedAt: 1,
+        logId: "l-active",
+    });
+
+    it("returns the saved session while its day has no log", async () => {
+        await repos.activeSession.put("u1", createSession([bench]), meta("2026-01-05"));
+        expect((await loadRestorableSession(repos, "u1"))?.meta?.templateId).toBe("r1");
+    });
+
+    it("returns undefined when there is nothing saved", async () => {
+        expect(await loadRestorableSession(repos, "u1")).toBeUndefined();
+    });
+
+    it("discards a session whose day already has a log, so it cannot be started again", async () => {
+        await repos.workoutLogs.save(log("l1", "2026-01-05", 60));
+        await repos.activeSession.put("u1", createSession([bench]), meta("2026-01-05"));
+        expect(await loadRestorableSession(repos, "u1")).toBeUndefined();
+        expect(await repos.activeSession.get("u1")).toBeUndefined();
     });
 });
 
