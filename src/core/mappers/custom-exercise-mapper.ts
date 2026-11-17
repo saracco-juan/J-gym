@@ -9,6 +9,7 @@ const MUSCLE_GROUPS: readonly MuscleGroup[] = [
     "shoulders",
     "arms",
     "core",
+    "cardio",
 ];
 
 export type CustomExerciseWithUser = CustomExercise & { userId: string };

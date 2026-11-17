@@ -77,7 +77,9 @@ describe("buildPickerOptions", () => {
 
 describe("muscleGroupLabel", () => {
     it("has a Spanish label for every group", () => {
-        expect(MUSCLE_GROUPS).toHaveLength(7);
+        expect(MUSCLE_GROUPS).toHaveLength(8);
+        expect(MUSCLE_GROUPS).toContain("cardio");
+        expect(muscleGroupLabel("cardio")).toBe("Cardio");
         expect(muscleGroupLabel("chest")).toBe("Pecho");
         for (const g of MUSCLE_GROUPS) expect(muscleGroupLabel(g).length).toBeGreaterThan(0);
     });

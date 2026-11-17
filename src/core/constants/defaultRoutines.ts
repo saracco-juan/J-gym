@@ -1,14 +1,13 @@
 /**
- * Default Routines Catalog — Plantillas semilla pre-cargadas.
+ * Default Routines Catalog — pre-loaded seed templates.
  *
- * Los ejercicios tienen nombre definido pero series, reps y peso
- * quedan en 0 (semilla) para que el usuario ingrese sus marcas.
+ * Exercises, sets and reps are predefined; every weight stays at 0 because
+ * each user enters their own. A target weight of 0 makes the workout open the
+ * set editor for the first input.
  *
- * Lógica de mapeo:
- * - 3 días → A, B, C
- * - 4 días → A, B, C, D (Brazos)
- * - 5 días → A, B, C, D, E (variantes sin repetir nombres)
- * - 6+ días → cicla A→B→C→D→E→A…
+ * Mapping logic (see mapDefaultRoutineToDays): the routine days are assigned,
+ * in order, to the weekdays the user selects. With more selected weekdays than
+ * routine days, the routine cycles back to its first day.
  */
 
 import type { IRoutineExercise } from "@/core/domain/routine-template";
@@ -41,62 +40,42 @@ export interface DefaultRoutine {
 const GYM_ROUTINE: DefaultRoutine = {
     id: "gym",
     name: "Rutina de Gimnasio",
-    description: "Piernas/Hombros, Espalda/Bíceps, Pecho/Tríceps y más.",
+    description: "Cardio, Piernas, Pecho / Hombros y Espalda / Hombros.",
     days: [
         {
-            label: "Piernas / Hombros",
+            label: "Cardio",
             exercises: [
-                { name: "Sentadilla smith", catalogId: "smith-squat", sets: 0, reps: 0, weight: 0 },
-                { name: "Cuádriceps", catalogId: "leg-extension", sets: 0, reps: 0, weight: 0 },
-                { name: "Isquios", catalogId: "leg-curl", sets: 0, reps: 0, weight: 0 },
-                { name: "Gemelos", catalogId: "calf-raise", sets: 0, reps: 0, weight: 0 },
-                { name: "Prensa", catalogId: "leg-press", sets: 0, reps: 0, weight: 0 },
-                { name: "Press militar c/máquina", catalogId: "machine-shoulder-press", sets: 0, reps: 0, weight: 0 },
-                { name: "Vuelo lateral", catalogId: "lateral-raise", sets: 0, reps: 0, weight: 0 },
+                { name: "Cardio", catalogId: "cardio", sets: 1, reps: 1, weight: 0 },
             ],
         },
         {
-            label: "Espalda / Bíceps",
+            label: "Piernas",
             exercises: [
-                { name: "Dominadas", catalogId: "pull-up", sets: 0, reps: 0, weight: 0 },
-                { name: "Dorsalera", catalogId: "lat-pulldown", sets: 0, reps: 0, weight: 0 },
-                { name: "Remo", catalogId: "seated-cable-row", sets: 0, reps: 0, weight: 0 },
-                { name: "Pull c/mancuerna", catalogId: "dumbbell-row", sets: 0, reps: 0, weight: 0 },
-                { name: "Martillo doble", catalogId: "hammer-curl", sets: 0, reps: 0, weight: 0 },
-                { name: "Scott", catalogId: "preacher-curl", sets: 0, reps: 0, weight: 0 },
+                { name: "Sentadilla", catalogId: "back-squat", sets: 3, reps: 8, weight: 0 },
+                { name: "Cuádriceps", catalogId: "leg-extension", sets: 3, reps: 10, weight: 0 },
+                { name: "Isquios", catalogId: "leg-curl", sets: 3, reps: 10, weight: 0 },
+                { name: "Gemelos", catalogId: "calf-raise", sets: 3, reps: 15, weight: 0 },
+                { name: "Prensa", catalogId: "leg-press", sets: 3, reps: 8, weight: 0 },
             ],
         },
         {
-            label: "Pecho / Tríceps",
+            label: "Pecho / Hombros",
             exercises: [
-                { name: "Press banca", catalogId: "bench-press", sets: 0, reps: 0, weight: 0 },
-                { name: "Press inclinado", catalogId: "incline-bench-press", sets: 0, reps: 0, weight: 0 },
-                { name: "Aperturas", catalogId: "dumbbell-fly", sets: 0, reps: 0, weight: 0 },
-                { name: "Flexiones", catalogId: "push-up", sets: 0, reps: 0, weight: 0 },
-                { name: "Canguro", catalogId: "triceps-kickback", sets: 0, reps: 0, weight: 0 },
-                { name: "Polea tríceps", catalogId: "triceps-pushdown", sets: 0, reps: 0, weight: 0 },
+                { name: "Press banca", catalogId: "bench-press", sets: 4, reps: 10, weight: 0 },
+                { name: "Press inclinado en smith", catalogId: "incline-bench-press", sets: 4, reps: 10, weight: 0 },
+                { name: "Aperturas", catalogId: "dumbbell-fly", sets: 4, reps: 10, weight: 0 },
+                { name: "Press militar con máquina", catalogId: "machine-shoulder-press", sets: 4, reps: 10, weight: 0 },
+                { name: "Vuelo lateral con polea", catalogId: "cable-lateral-raise", sets: 4, reps: 10, weight: 0 },
             ],
         },
         {
-            label: "Brazos",
+            label: "Espalda / Hombros",
             exercises: [
-                { name: "Curl barra", catalogId: "barbell-curl", sets: 0, reps: 0, weight: 0 },
-                { name: "Martillo alterno", catalogId: "alternating-hammer-curl", sets: 0, reps: 0, weight: 0 },
-                { name: "Predicador", catalogId: "preacher-curl", sets: 0, reps: 0, weight: 0 },
-                { name: "Fondos tríceps", catalogId: "dips", sets: 0, reps: 0, weight: 0 },
-                { name: "Press francés", catalogId: "skull-crusher", sets: 0, reps: 0, weight: 0 },
-                { name: "Extensión polea", catalogId: "triceps-pushdown", sets: 0, reps: 0, weight: 0 },
-            ],
-        },
-        {
-            label: "Pecho / Espalda (Variante)",
-            exercises: [
-                { name: "Press pecho c/mancuerna", catalogId: "dumbbell-bench-press", sets: 0, reps: 0, weight: 0 },
-                { name: "Cruce de poleas", catalogId: "cable-crossover", sets: 0, reps: 0, weight: 0 },
-                { name: "Pullover", catalogId: "dumbbell-pullover", sets: 0, reps: 0, weight: 0 },
-                { name: "Remo c/mancuerna", catalogId: "dumbbell-row", sets: 0, reps: 0, weight: 0 },
-                { name: "Jalón agarre cerrado", catalogId: "close-grip-pulldown", sets: 0, reps: 0, weight: 0 },
-                { name: "Face pull", catalogId: "face-pull", sets: 0, reps: 0, weight: 0 },
+                { name: "Dorsalera", catalogId: "lat-pulldown", sets: 4, reps: 8, weight: 0 },
+                { name: "Remo", catalogId: "seated-cable-row", sets: 4, reps: 8, weight: 0 },
+                { name: "Rear delt", catalogId: "rear-delt-fly", sets: 4, reps: 8, weight: 0 },
+                { name: "Press militar con mancuerna", catalogId: "dumbbell-shoulder-press", sets: 4, reps: 8, weight: 0 },
+                { name: "Vuelos laterales con mancuerna", catalogId: "lateral-raise", sets: 4, reps: 8, weight: 0 },
             ],
         },
     ],
@@ -117,17 +96,16 @@ function buildExercises(defs: SeedExercise[]): IRoutineExercise[] {
                     targetReps: def.reps,
                     targetWeight: def.weight,
                 }))
-                : [], // Semilla: el usuario debe llenar
+                : [], // Seed without sets: the user fills them in
     }));
 }
 
 /**
- * Mapea la rutina por defecto a los días seleccionados.
+ * Maps the default routine onto the selected weekdays.
  *
- * - 3 días → Piernas/Hombros, Espalda/Bíceps, Pecho/Tríceps
- * - 4 días → +Brazos
- * - 5 días → +Variante Pecho/Espalda
- * - 6+ → cicla
+ * Routine days are assigned in order: Cardio, Piernas, Pecho / Hombros,
+ * Espalda / Hombros. Selecting more weekdays than the routine has days
+ * cycles back to the first one.
  */
 export function mapDefaultRoutineToDays(
     selectedDays: string[],
