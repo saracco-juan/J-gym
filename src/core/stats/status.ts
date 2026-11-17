@@ -40,3 +40,11 @@ export function computeStatus(
     if (findStagnantExercises(logs).size > 0) return "stagnant";
     return improvedThisMonth ? "progressing" : "steady";
 }
+
+/** Spanish label of each status, for the leaderboard card. */
+export const STATUS_LABELS: Readonly<Record<TrainingStatus, string>> = {
+    progressing: "Progresando",
+    stagnant: "Estancado",
+    inactive: "Inactivo",
+    steady: "Constante",
+};

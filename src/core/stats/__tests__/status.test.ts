@@ -1,5 +1,5 @@
 import { exercise, log, trainedLog } from "../__fixtures__/builders";
-import { computeStatus } from "../status";
+import { STATUS_LABELS, computeStatus } from "../status";
 
 const TODAY = "2026-11-17";
 
@@ -46,5 +46,16 @@ describe("computeStatus", () => {
     it("does not count a log without sets as activity", () => {
         const logs = [log("2026-11-16", [exercise([], { status: "skipped" })])];
         expect(computeStatus(logs, TODAY, false)).toBe("inactive");
+    });
+});
+
+describe("STATUS_LABELS", () => {
+    it("names the four statuses in Spanish", () => {
+        expect(STATUS_LABELS).toEqual({
+            progressing: "Progresando",
+            stagnant: "Estancado",
+            inactive: "Inactivo",
+            steady: "Constante",
+        });
     });
 });
