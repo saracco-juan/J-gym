@@ -13,3 +13,5 @@ export {
 export type { AuthErrorKind } from "./otp";
 export { shouldOfferEmailLink } from "./account-link";
 export type { AccountLinkUser } from "./account-link";
+export { signOutWarning } from "./sign-out-warning";
+export type { SignOutWarning, SignOutWarningInput } from "./sign-out-warning";

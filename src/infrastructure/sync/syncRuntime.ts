@@ -56,22 +56,60 @@ export function getSyncEngine(): SyncEngine {
     return engine;
 }
 
+const FLUSH_TIMEOUT_MS = 5000;
+const SIGN_OUT_TIMEOUT_MS = 4000;
+
+/** Rejects when `work` does not settle in time; always clears its timer. */
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timeout")), ms);
+    });
+    return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
+}
+
 /**
- * Signs out. Tries a last flush first; local data is wiped afterwards only
- * when the outbox is empty (otherwise unsynced work would be lost, so it is
- * kept on the device and syncs after the next sign-in of the same user).
+ * Removes the auth session, whatever the network does. The server call can
+ * throw, return an error or hang while offline, and in those cases the
+ * session would stay in storage; `scope: "local"` only drops it from this
+ * device and needs no network. Never throws.
+ */
+async function removeSession(): Promise<void> {
+    const auth = createSupabaseBrowserClient().auth;
+    try {
+        const { error } = await withTimeout(auth.signOut(), SIGN_OUT_TIMEOUT_MS);
+        if (!error) return;
+    } catch {
+        // Fall through to the local sign-out.
+    }
+    try {
+        await auth.signOut({ scope: "local" });
+    } catch {
+        // Nothing else can be done; the caller still leaves the screen.
+    }
+}
+
+/**
+ * Signs out. Tries a last flush first (best effort, bounded); local data is
+ * wiped afterwards only when the outbox is empty (otherwise unsynced work
+ * would be lost, so it is kept on the device and syncs after the next sign-in
+ * of the same user). Never throws.
  */
 export async function signOutAndClear(): Promise<{ cleared: boolean }> {
     const repos = getLocalRepositories();
     try {
-        await Promise.race([getSyncEngine().flush(), new Promise((r) => setTimeout(r, 5000))]);
+        await withTimeout(getSyncEngine().flush(), FLUSH_TIMEOUT_MS);
     } catch {
         // Best effort: signing out must not depend on the network.
     }
-    await createSupabaseBrowserClient().auth.signOut();
-    if (canClearLocalData(await repos.outbox.count())) {
-        await repos.sync.clearAll();
-        return { cleared: true };
+    await removeSession();
+    try {
+        if (canClearLocalData(await repos.outbox.count())) {
+            await repos.sync.clearAll();
+            return { cleared: true };
+        }
+    } catch {
+        // Local data stays; the session is already gone.
     }
     return { cleared: false };
 }
