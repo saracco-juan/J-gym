@@ -11,3 +11,5 @@ export {
     normalizeOtpCode,
 } from "./otp";
 export type { AuthErrorKind } from "./otp";
+export { shouldOfferEmailLink } from "./account-link";
+export type { AccountLinkUser } from "./account-link";
