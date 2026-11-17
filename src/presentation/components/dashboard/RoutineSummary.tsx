@@ -43,7 +43,7 @@ function TemplateSummary({ template }: { template: IRoutineTemplate }) {
                                 {re.exercise.name}
                             </span>
                             <span className="text-xs text-zinc-500">
-                                {scheme} · {weight}kg
+                                {weight > 0 ? `${scheme} · ${weight}kg` : scheme}
                             </span>
                         </div>
                         <span className="text-xs font-medium text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-full">
