@@ -5,6 +5,7 @@ const config: Config = {
     testEnvironment: "node",
     roots: [
         "<rootDir>/src/core",
+        "<rootDir>/src/infrastructure/account",
         "<rootDir>/src/infrastructure/auth",
         "<rootDir>/src/infrastructure/leaderboard",
         "<rootDir>/src/infrastructure/local",

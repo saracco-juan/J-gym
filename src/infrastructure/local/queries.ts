@@ -220,7 +220,7 @@ export async function saveRoutineEdits(
     for (const routine of plan.upserts) await repos.routines.save(routine);
 }
 
-/** Dev reset: removes the user's data locally and queues the deletes for the server. */
+/** Reset: removes the user's data locally and queues the deletes for the server. */
 export async function resetUserData(repos: LocalRepositories, userId: string): Promise<void> {
     for (const log of await repos.workoutLogs.listByUser(userId)) {
         await repos.workoutLogs.remove(log.id);
