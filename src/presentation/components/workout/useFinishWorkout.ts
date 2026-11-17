@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { StandardHypertrophyStrategy } from "@/core/strategies";
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
 import { finishWorkoutLocally } from "@/infrastructure/local/queries";
+import { requestStatsPublish } from "@/presentation/stats/requestStatsPublish";
 import { useWorkoutStore } from "@/presentation/stores/useWorkoutStore";
 
 const strategy = new StandardHypertrophyStrategy();
@@ -54,6 +55,8 @@ export function useFinishWorkout() {
                 strategy,
                 weightOverrides,
             });
+            // The workout changes streak, XP and volume: queue a fresh snapshot.
+            await requestStatsPublish();
 
             if (result.newPRs.length > 0) {
                 setNewPRs(result.newPRs);

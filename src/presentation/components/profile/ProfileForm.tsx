@@ -23,6 +23,7 @@ import {
 import { getLocalRepositories } from "@/infrastructure/local/localRepositories";
 import { getSyncEngine } from "@/infrastructure/sync/syncRuntime";
 import Avatar from "@/presentation/components/ui/Avatar";
+import { requestStatsPublish } from "@/presentation/stats/requestStatsPublish";
 import BackButton from "@/presentation/components/ui/BackButton";
 import {
     isNameRejected,
@@ -96,6 +97,8 @@ export default function ProfileForm({ userId, profile }: ProfileFormProps) {
         if (!unchanged) {
             await getLocalRepositories().profiles.save(next);
             await refreshProfile(userId);
+            // The profile is what lets the stats reach the leaderboard.
+            await requestStatsPublish();
             if (typeof navigator === "undefined" || navigator.onLine) {
                 await Promise.race([
                     getSyncEngine().flush().catch(() => undefined),
