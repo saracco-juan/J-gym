@@ -28,6 +28,7 @@ export default function UserProfile() {
     const [user, setUser] = useState<UserInfo | null>(null);
     const [open, setOpen] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+    const [resetError, setResetError] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
     // ─── Fetch user on mount ─────────────────────────────────
@@ -78,7 +79,7 @@ export default function UserProfile() {
 
     const handleReset = useCallback(async () => {
         const confirmed = window.confirm(
-            "ATENCIÓN: Esto borrará TODAS tus rutinas y registros. ¿Estás seguro?"
+            "Esto borrará todas tus rutinas y registros. ¿Querés continuar?"
         );
         if (!confirmed) return;
 
@@ -86,13 +87,14 @@ export default function UserProfile() {
         if (!userId) return;
 
         setIsResetting(true);
+        setResetError(null);
         try {
             // Local reset; the deletes reach the server through the outbox.
             await resetUserData(getLocalRepositories(), userId);
             setOpen(false);
             router.push("/onboarding");
         } catch {
-            alert("Error al resetear.");
+            setResetError("No se pudo reiniciar la app. Intentá de nuevo.");
         } finally {
             setIsResetting(false);
         }
@@ -108,19 +110,22 @@ export default function UserProfile() {
         <div className="relative" ref={menuRef}>
             {/* Avatar button */}
             <button
+                type="button"
                 onClick={() => setOpen((o) => !o)}
-                className="w-10 h-10 rounded-full overflow-hidden border-2 border-zinc-700 hover:border-emerald-500 transition-all active:scale-95"
+                className="pressable size-12 overflow-hidden rounded-full border-2 border-surface-border hover:border-accent-hover"
                 aria-label="Perfil de usuario"
+                aria-expanded={open}
+                aria-haspopup="menu"
             >
                 {user.avatarUrl ? (
                     <img
                         src={user.avatarUrl}
                         alt={user.name}
-                        className="w-full h-full object-cover"
+                        className="h-full w-full object-cover"
                         referrerPolicy="no-referrer"
                     />
                 ) : (
-                    <div className="w-full h-full bg-emerald-600 flex items-center justify-center text-white font-bold text-sm">
+                    <div className="body-4 flex h-full w-full items-center justify-center bg-accent text-text-primary">
                         {initial}
                     </div>
                 )}
@@ -128,33 +133,46 @@ export default function UserProfile() {
 
             {/* Dropdown */}
             {open && (
-                <div className="absolute right-0 top-12 w-56 rounded-xl bg-zinc-900 border border-zinc-700 shadow-xl shadow-black/40 py-2 z-50">
+                <div
+                    role="menu"
+                    className="absolute right-0 top-full z-50 mt-2 flex w-64 flex-col gap-1 rounded-xl border border-surface-border bg-surface-raised p-2"
+                >
                     {/* User info */}
-                    <div className="px-4 py-2 border-b border-zinc-800">
-                        <p className="text-sm font-semibold text-white truncate">{user.name}</p>
+                    <div className="px-3 py-2">
+                        <p className="body-4 truncate text-text-primary">{user.name}</p>
                         {user.email && (
-                            <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                            <p className="caption-5 truncate text-text-muted">{user.email}</p>
                         )}
                     </div>
 
                     {/* Logout */}
                     <button
+                        type="button"
+                        role="menuitem"
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 transition-all"
+                        className="pressable body-5 flex min-h-12 w-full items-center gap-3 rounded-sm px-3 py-2 text-text-primary hover:bg-surface-strong"
                     >
-                        <SignOut size={16} /> Cerrar Sesión
+                        <SignOut size={20} weight="bold" /> Cerrar sesión
                     </button>
 
                     {/* Reset (development only) */}
                     {process.env.NODE_ENV !== "production" && (
                         <button
+                            type="button"
+                            role="menuitem"
                             onClick={handleReset}
                             disabled={isResetting}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-zinc-800 transition-all disabled:opacity-50"
+                            className="pressable body-5 flex min-h-12 w-full items-center gap-3 rounded-sm px-3 py-2 text-danger-text hover:enabled:bg-surface-strong disabled:opacity-50"
                         >
-                            <ArrowCounterClockwise size={16} className={isResetting ? "animate-spin" : ""} />
-                            {isResetting ? "Reseteando..." : "Reset App (Dev)"}
+                            <ArrowCounterClockwise size={20} weight="bold" />
+                            {isResetting ? "Reiniciando…" : "Reiniciar app (solo desarrollo)"}
                         </button>
+                    )}
+
+                    {resetError && (
+                        <p role="alert" className="caption-5 px-3 py-2 text-danger-text">
+                            {resetError}
+                        </p>
                     )}
                 </div>
             )}

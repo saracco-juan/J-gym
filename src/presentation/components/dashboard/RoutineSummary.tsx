@@ -36,17 +36,17 @@ function TemplateSummary({ template }: { template: IRoutineTemplate }) {
                 return (
                     <div
                         key={re.exercise.id}
-                        className="flex items-center justify-between rounded-xl bg-zinc-900/80 border border-zinc-800 px-4 py-3"
+                        className="flex items-center justify-between gap-3 rounded-xl border border-surface-border bg-surface-raised px-4 py-3"
                     >
-                        <div className="flex flex-col gap-0.5">
-                            <span className="text-sm font-semibold text-white">
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                            <span className="body-4 text-text-primary">
                                 {re.exercise.name}
                             </span>
-                            <span className="text-xs text-zinc-500">
+                            <span className="caption-5 text-text-muted">
                                 {weight > 0 ? `${scheme} · ${weight}kg` : scheme}
                             </span>
                         </div>
-                        <span className="text-xs font-medium text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-full">
+                        <span className="caption-4 shrink-0 rounded-full bg-accent-soft px-2 py-1 text-accent-text">
                             {scheme}
                         </span>
                     </div>
@@ -64,13 +64,13 @@ function LogSummary({ log }: { log: IWorkoutLog }) {
             {log.exercises.map((we) => (
                 <div
                     key={we.exercise.id}
-                    className="rounded-xl bg-zinc-900/80 border border-zinc-800 overflow-hidden"
+                    className="overflow-hidden rounded-xl border border-surface-border bg-surface-raised"
                 >
-                    <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-800/50">
-                        <span className="text-sm font-semibold text-white">
+                    <div className="flex items-center justify-between gap-3 bg-surface-overlay px-4 py-2">
+                        <span className="body-4 min-w-0 text-text-primary">
                             {we.exercise.name}
                         </span>
-                        <span className="text-xs text-zinc-500">
+                        <span className="caption-5 shrink-0 text-text-muted">
                             {we.sets.length} serie{we.sets.length !== 1 ? "s" : ""}
                         </span>
                     </div>
@@ -78,16 +78,16 @@ function LogSummary({ log }: { log: IWorkoutLog }) {
                         {we.sets.map((s) => (
                             <div
                                 key={s.setNumber}
-                                className="flex items-center gap-3 text-xs text-zinc-400"
+                                className="caption-5 flex items-center gap-3 text-text-secondary"
                             >
-                                <span className="w-5 font-bold text-zinc-600">
+                                <span className="caption-3 w-6 text-text-muted">
                                     S{s.setNumber}
                                 </span>
-                                <span className="text-white font-medium">
+                                <span className="caption-4 font-mono text-text-primary">
                                     {s.actualReps} reps
                                 </span>
-                                <span className="text-zinc-500">×</span>
-                                <span className="text-white font-medium">
+                                <span className="text-text-muted">×</span>
+                                <span className="caption-4 font-mono text-text-primary">
                                     {s.actualWeight}kg
                                 </span>
                             </div>

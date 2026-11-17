@@ -239,9 +239,13 @@
   }
 }
 
-@utility skeleton {
-  @apply rounded-lg bg-surface-strong;
+/* Opacity only "in progress" cue, used where a spinner would otherwise go. */
+@utility pulse-soft {
   animation: skeleton-pulse 1.6s var(--ease-base) infinite;
+}
+
+@utility skeleton {
+  @apply pulse-soft bg-surface-strong;
 }
 
 /* Reduced motion: movement becomes a plain opacity or colour change. */
