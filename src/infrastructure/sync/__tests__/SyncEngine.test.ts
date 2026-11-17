@@ -21,6 +21,7 @@ class FakeTransport implements SyncTransport {
     failWith: ((c: SyncCommand) => SyncTransportError | null) | null = null;
     gate: Promise<void> | null = null;
     serverRoutines: unknown[] = [];
+    serverProfile: unknown | null = null;
 
     async execute(command: SyncCommand): Promise<void> {
         if (this.gate) await this.gate;
@@ -36,6 +37,9 @@ class FakeTransport implements SyncTransport {
     }
     async fetchLogsSince(): Promise<unknown[]> {
         return [];
+    }
+    async fetchProfile(): Promise<unknown | null> {
+        return this.serverProfile;
     }
 }
 
@@ -251,6 +255,47 @@ describe("conflicts", () => {
         expect(transport.commands).toHaveLength(0);
         const entries = await repos.outbox.list();
         expect(entries.map((e) => e.attempts)).toEqual([1, 1]);
+    });
+});
+
+describe("profile name conflicts", () => {
+    const profile = { userId: "u1", displayName: "Juan", avatarColor: "#2563eb" };
+    const rejectProfile = (c: SyncCommand) =>
+        c.kind === "upsert" && c.table === "profiles"
+            ? new SyncTransportError("duplicate key value", 409, "23505")
+            : null;
+
+    it("drops a profile rejected for a taken name and remembers why, without retrying", async () => {
+        await repos.profiles.save(profile);
+        transport.failWith = rejectProfile;
+        await engine.flush();
+
+        expect(await repos.outbox.count()).toBe(0);
+        expect(await repos.profiles.getRejection("u1")).toEqual({
+            displayName: "Juan",
+            reason: "name-taken",
+        });
+        expect(await repos.profiles.get("u1")).toEqual(profile);
+        expect(engine.getState().status).toBe("idle");
+    });
+
+    it("keeps sending the rest of the queue after a rejected profile", async () => {
+        await repos.profiles.save(profile);
+        await repos.routines.save(routine);
+        transport.failWith = rejectProfile;
+        await engine.flush();
+
+        expect(transport.commands.map((c) => c.table)).toEqual(["routine_templates"]);
+        expect(await repos.outbox.count()).toBe(0);
+    });
+
+    it("sends a valid profile and leaves no rejection", async () => {
+        await repos.profiles.save(profile);
+        await engine.flush();
+        expect(transport.commands).toEqual([
+            expect.objectContaining({ table: "profiles", onConflict: "user_id" }),
+        ]);
+        expect(await repos.profiles.getRejection("u1")).toBeUndefined();
     });
 });
 
