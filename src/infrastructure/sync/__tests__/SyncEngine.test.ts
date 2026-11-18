@@ -39,6 +39,9 @@ class FakeTransport implements SyncTransport {
     async fetchLogsSince(): Promise<unknown[]> {
         return [];
     }
+    async fetchDayOverridesSince(): Promise<unknown[]> {
+        return [];
+    }
     async fetchProfile(): Promise<unknown | null> {
         return this.serverProfile;
     }

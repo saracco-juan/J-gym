@@ -1,5 +1,6 @@
 import "fake-indexeddb/auto";
 import type { IRoutineExercise, IRoutineTemplate, IWorkoutLog } from "@/core/domain";
+import { currentWeekDates } from "@/core/schedule";
 import { createSession, sessionReducer } from "@/core/session";
 import { StandardHypertrophyStrategy } from "@/core/strategies";
 import { JgymDatabase } from "../db";
@@ -493,7 +494,10 @@ describe("week day swap", () => {
     });
 
     it("refuses blocked swaps without writing", async () => {
-        expect(await swapDays(repos, "u1", MON, MON, WED)).toEqual({ ok: false, reason: "rest-day" });
+        expect(await swapDays(repos, "u1", MON, WED, "2026-11-19")).toEqual({
+            ok: false,
+            reason: "rest-day",
+        });
         expect(await swapDays(repos, "u1", TUE, MON, TUE)).toEqual({ ok: false, reason: "past" });
         await repos.workoutLogs.save(log("l1", MON, 60));
         expect(await swapDays(repos, "u1", MON, MON, TUE)).toEqual({ ok: false, reason: "logged" });
@@ -523,22 +527,54 @@ describe("week day swap", () => {
         expect(await resetWeek(repos, "u1", TUE)).toEqual({ ok: false, reason: "past" });
     });
 
-    it("drops overrides of earlier weeks when the week is rewritten", async () => {
+    it("swaps a training day with a rest day", async () => {
+        expect(await swapDays(repos, "u1", MON, TUE, WED)).toEqual({ ok: true });
+        const plan = await loadWeekPlan(repos, "u1", MON);
+        expect(plan.days[1]).toMatchObject({ date: TUE, dayName: "miércoles", exerciseCount: 0 });
+        expect(plan.days[2]).toMatchObject({ date: WED, dayName: "martes", exerciseCount: 2 });
+    });
+
+    it("keeps the overrides of earlier weeks when the week is rewritten", async () => {
         await swapDays(repos, "u1", MON, MON, TUE);
         await repos.routines.save({ ...tuesday, id: "r3", dayName: "jueves" });
         const nextMon = "2026-11-23";
         await swapDays(repos, "u1", nextMon, "2026-11-24", "2026-11-26");
         expect(await repos.dayOverrides.listForRange("u1", "2026-01-01", "2026-12-31")).toEqual([
+            { userId: "u1", date: MON, dayName: "martes" },
+            { userId: "u1", date: TUE, dayName: "lunes" },
             { userId: "u1", date: "2026-11-24", dayName: "jueves" },
             { userId: "u1", date: "2026-11-26", dayName: "martes" },
         ]);
     });
 
-    it("never touches the outbox", async () => {
-        const before = await repos.outbox.count();
+    it("queues an upsert per swapped day and a delete per undone day", async () => {
+        const pending = async () =>
+            (await repos.outbox.list())
+                .filter((e) => e.entity === "dayOverride")
+                .map((e) => ({ entityId: e.entityId, op: e.op, payload: e.payload }))
+                .sort((x, y) => x.entityId.localeCompare(y.entityId));
+
         await swapDays(repos, "u1", MON, MON, TUE);
+        expect(await pending()).toEqual([
+            { entityId: `u1:${MON}`, op: "upsert", payload: { userId: "u1", date: MON, dayName: "martes" } },
+            { entityId: `u1:${TUE}`, op: "upsert", payload: { userId: "u1", date: TUE, dayName: "lunes" } },
+        ]);
+
         await resetWeek(repos, "u1", MON);
-        expect(await repos.outbox.count()).toBe(before);
+        expect(await pending()).toEqual([
+            { entityId: `u1:${MON}`, op: "delete", payload: { userId: "u1", date: MON } },
+            { entityId: `u1:${TUE}`, op: "delete", payload: { userId: "u1", date: TUE } },
+        ]);
+    });
+
+    it("queues nothing for days whose routine did not change", async () => {
+        await swapDays(repos, "u1", MON, MON, TUE);
+        const before = (await repos.outbox.list()).map((e) => e.id);
+        await repos.dayOverrides.replaceWeek("u1", currentWeekDates(MON), {
+            [MON]: "martes",
+            [TUE]: "lunes",
+        });
+        expect((await repos.outbox.list()).map((e) => e.id)).toEqual(before);
     });
 
     it("is cleared by resetUserData and clearAll", async () => {

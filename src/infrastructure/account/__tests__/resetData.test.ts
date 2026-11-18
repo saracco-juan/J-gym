@@ -94,6 +94,15 @@ describe("resetOwnData", () => {
         await resetOwnData(repos, { userId: "u1", today: "2026-01-05", registered: false });
         expect(await repos.dayOverrides.listForRange("u1", week[0], week[6])).toEqual([]);
         expect(await repos.dayOverrides.listForRange("u2", week[0], week[6])).toHaveLength(2);
+        const pending = (await repos.outbox.list()).filter((e) => e.entity === "dayOverride");
+        const ops = pending.map((e) => `${e.entityId} ${e.op}`).sort();
+        // The other account's pending upserts of the same dates survive.
+        expect(ops).toEqual([
+            "u1:2026-01-05 delete",
+            "u1:2026-01-06 delete",
+            "u2:2026-01-05 upsert",
+            "u2:2026-01-06 upsert",
+        ]);
     });
 
     it("publishes no stats for an anonymous account", async () => {

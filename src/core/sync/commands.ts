@@ -26,6 +26,20 @@ export type SyncTable =
     | "public_stats"
     | "day_overrides";
 
+/**
+ * Outbox entity id of a swapped day. Scoped by user so pending writes of two
+ * accounts on one device never coalesce into each other.
+ */
+export function dayOverrideEntityId(userId: string, date: string): string {
+    return `${userId}:${date}`;
+}
+
+/** Payload of a removed swapped day. */
+export interface DayOverrideKey {
+    userId: string;
+    date: string;
+}
+
 export type SyncCommand =
     | {
           kind: "upsert";
@@ -55,7 +69,7 @@ export function toSyncCommand(entry: OutboxEntry, userId: string, nowIso: string
                     kind: "delete-by-date",
                     table: "day_overrides",
                     userId,
-                    date: entry.entityId,
+                    date: (entry.payload as DayOverrideKey).date,
                 };
             case "customExercise":
                 return {

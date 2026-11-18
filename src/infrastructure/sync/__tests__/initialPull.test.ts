@@ -14,6 +14,9 @@ class FakeTransport implements SyncTransport {
     routines: unknown[] = [];
     custom: unknown[] = [];
     logs: unknown[] = [];
+    overrides: unknown[] = [];
+    overridesError: Error | null = null;
+    overridesSince: string | null = null;
     profile: unknown | null = null;
     profileError: Error | null = null;
     since: string | null = null;
@@ -34,6 +37,13 @@ class FakeTransport implements SyncTransport {
         void userId;
         this.since = since;
         return this.logs;
+    }
+    async fetchDayOverridesSince(userId: string, since: string): Promise<unknown[]> {
+        this.fetched++;
+        void userId;
+        this.overridesSince = since;
+        if (this.overridesError) throw this.overridesError;
+        return this.overrides;
     }
     async fetchProfile(): Promise<unknown | null> {
         this.fetched++;
@@ -86,6 +96,40 @@ describe("runInitialPull", () => {
         expect(await repos.outbox.count()).toBe(0);
         expect(await repos.meta.get("lastPulledAt:u1")).toBe(NOW);
         expect(transport.since).toBe("2026-02-01");
+    });
+
+    it("pulls the swapped days of the same window without outbox entries", async () => {
+        transport.routines = [serverRoutine];
+        transport.overrides = [
+            { user_id: "u1", date: "2026-05-29", day_name: "lunes", schema_version: 1 },
+            { user_id: "u1", date: "2026-05-25", day_name: "viernes", schema_version: 1 },
+        ];
+
+        await runInitialPull(repos, transport, "u1", NOW);
+
+        expect(transport.overridesSince).toBe("2026-02-01");
+        expect(await repos.dayOverrides.listByUser("u1")).toEqual([
+            { userId: "u1", date: "2026-05-25", dayName: "viernes" },
+            { userId: "u1", date: "2026-05-29", dayName: "lunes" },
+        ]);
+        expect(await repos.outbox.count()).toBe(0);
+    });
+
+    it("still completes the pull when the server has no day_overrides table", async () => {
+        transport.routines = [serverRoutine];
+        transport.overridesError = new SyncTransportError("relation does not exist", 404, "42P01");
+
+        await runInitialPull(repos, transport, "u1", NOW);
+
+        expect(await repos.routines.get("srv-1")).toBeDefined();
+        expect(await repos.dayOverrides.listByUser("u1")).toEqual([]);
+        expect(await repos.meta.get("lastPulledAt:u1")).toBe(NOW);
+    });
+
+    it("retries later when the swapped days cannot be reached", async () => {
+        transport.overridesError = new SyncTransportError("offline", 0);
+        await expect(runInitialPull(repos, transport, "u1", NOW)).rejects.toThrow("offline");
+        expect(await repos.meta.get("lastPulledAt:u1")).toBeUndefined();
     });
 
     it("does nothing once the user was pulled", async () => {

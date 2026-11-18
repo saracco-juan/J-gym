@@ -39,7 +39,7 @@ export interface EnqueueInput {
 
 /**
  * Parents first: routines, then custom exercises, then logs, then the week
- * overrides (keyed by date, no parent), then the profile, and the public stats last (the server only accepts them once the profile exists).
+ * overrides (keyed by user and date, no parent), then the profile, and the public stats last (the server only accepts them once the profile exists).
  */
 export const ENTITY_PRIORITY: Readonly<Record<OutboxEntity, number>> = {
     routine: 0,

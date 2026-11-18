@@ -50,6 +50,14 @@ export function createSupabaseTransport(client: SupabaseClient): SyncTransport {
                     );
                 case "delete":
                     return run(client.from(command.table).delete().eq("id", command.id));
+                case "delete-by-date":
+                    return run(
+                        client
+                            .from(command.table)
+                            .delete()
+                            .eq("user_id", command.userId)
+                            .eq("date", command.date)
+                    );
                 case "soft-delete":
                     return run(
                         client
@@ -79,6 +87,14 @@ export function createSupabaseTransport(client: SupabaseClient): SyncTransport {
                     .eq("user_id", userId)
                     .gte("date", sinceDate)
                     .order("date", { ascending: false })
+            ),
+        fetchDayOverridesSince: (userId, sinceDate) =>
+            select(
+                client
+                    .from("day_overrides")
+                    .select("*")
+                    .eq("user_id", userId)
+                    .gte("date", sinceDate)
             ),
     };
 }

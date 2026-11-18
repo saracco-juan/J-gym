@@ -1,7 +1,7 @@
 import type { IRoutineTemplate, IWorkoutLog } from "@/core/domain";
 import { coalesceEntry, type OutboxEntry } from "../outbox";
 import { classifySyncError, shouldDropFailedEntry } from "../classify-error";
-import { detachTemplate, toSyncCommand } from "../commands";
+import { dayOverrideEntityId, detachTemplate, toSyncCommand } from "../commands";
 import { planFlush } from "../flush-plan";
 import { decideInitialPull, planRoutineRekeys } from "../adoption";
 import { canClearLocalData, resolveUserId } from "../local-user";
@@ -323,9 +323,19 @@ describe("day override commands", () => {
         });
     });
 
+    it("keys the outbox entry by user and date", () => {
+        expect(dayOverrideEntityId("u1", "2026-11-20")).toBe("u1:2026-11-20");
+        expect(dayOverrideEntityId("u2", "2026-11-20")).not.toBe(dayOverrideEntityId("u1", "2026-11-20"));
+    });
+
     it("deletes a removed override by the session user and its date", () => {
         const cmd = toSyncCommand(
-            entry({ entity: "dayOverride", entityId: "2026-11-20", op: "delete", payload }),
+            entry({
+                entity: "dayOverride",
+                entityId: "stale:2026-11-20",
+                op: "delete",
+                payload: { userId: "stale", date: "2026-11-20" },
+            }),
             "u1",
             "x"
         );

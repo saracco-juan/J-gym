@@ -53,8 +53,9 @@ export interface ProfileRejection {
 }
 
 /**
- * A swapped day of the current week: `date` shows the routine of `dayName`.
- * Local only, never synced.
+ * A swapped day: `date` shows the routine of `dayName`. Rows of past weeks are
+ * kept (the stats read them). Synced to `day_overrides` through the outbox,
+ * keyed by the date.
  */
 export interface DayOverrideRecord {
     userId: string;
@@ -88,7 +89,7 @@ export class JgymDatabase extends Dexie {
         this.version(2).stores({
             profiles: "userId",
         });
-        // v3: swapped days of the current week (local only).
+        // v3: swapped days (synced through the outbox since migration 0007; same key).
         this.version(3).stores({
             dayOverrides: "[userId+date], userId",
         });
