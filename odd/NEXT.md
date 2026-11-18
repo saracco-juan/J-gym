@@ -3,7 +3,7 @@
 Handoff written 2026-11-17. Start here when resuming on any machine.
 
 ## How to resume
-1. Open Claude Code with this repo folder (`J-gym`) as the working directory, so `AGENTS.md` loads.
+1. Open Claude Code with this repo folder (`J-gym`) as the working directory, so `CLAUDE.md` loads.
 2. Install the design skill used by the UI:
    `npx skills add elayadesign/ai-design-skills --skill landing-page-design -g`
 3. Ask: "Read odd/NEXT.md and odd/tasks/stage2-routine-and-leaderboard.md and continue from the next open step."
