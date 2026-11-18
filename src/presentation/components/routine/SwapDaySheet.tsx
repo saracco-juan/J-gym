@@ -27,7 +27,8 @@ export default function SwapDaySheet({ source, options, isBusy, onSelect, onClos
     return (
         <BottomSheet title={`Intercambiar ${weekdayLabel(source.naturalDayName)}`} onClose={onClose}>
             <p className="body-6 text-text-secondary">
-                Elegí con qué día cambiar la rutina. Solo vale para esta semana.
+                Elegí con qué día cambiar la rutina, también puede ser un día de descanso. Solo vale
+                para esta semana.
             </p>
             <ul className="mt-4 flex flex-col gap-2">
                 {options.map(({ day, blocked }) => (
