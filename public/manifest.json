@@ -1,5 +1,5 @@
 {
-    "name": "J-GYM — Sobrecarga Progresiva",
+    "name": "J-GYM",
     "short_name": "J-GYM",
     "description": "PWA mobile-first para trackear entrenamientos en el gimnasio con gestión de sobrecarga progresiva.",
     "start_url": "/dashboard",

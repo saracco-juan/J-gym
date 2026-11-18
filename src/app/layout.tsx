@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "J-GYM — Sobrecarga Progresiva",
+  title: "J-GYM",
   description:
     "PWA mobile-first para trackear entrenamientos en el gimnasio con gestion de sobrecarga progresiva.",
   manifest: "/manifest.json",
