@@ -139,4 +139,38 @@ describe("computeStreaks", () => {
         // Tuesday is not a training day, so not logging it breaks nothing.
         expect(computeStreaks(templates, logs, "2026-11-18").streak).toBe(1);
     });
+
+    describe("with week overrides", () => {
+        // Tuesday the 10th's routine moved to Friday the 13th.
+        const overrides = { "2026-11-10": "viernes", "2026-11-13": "martes" };
+        const dates = [
+            "2026-11-09",
+            "2026-11-11",
+            "2026-11-12",
+            "2026-11-13",
+            "2026-11-16",
+            "2026-11-17",
+        ];
+
+        it("keeps the streak when the moved routine is trained on the rest day", () => {
+            const logs = dates.map((d) => trainedLog(d));
+            expect(computeStreaks(seedTemplates(), logs, "2026-11-17", overrides)).toEqual({
+                streak: 6,
+                bestStreak: 6,
+            });
+        });
+
+        it("breaks when the rest day that now carries the routine is missed", () => {
+            const logs = dates.filter((d) => d !== "2026-11-13").map((d) => trainedLog(d));
+            expect(computeStreaks(seedTemplates(), logs, "2026-11-17", overrides)).toEqual({
+                streak: 2,
+                bestStreak: 3,
+            });
+        });
+
+        it("reads the schedule by weekday without overrides", () => {
+            const logs = dates.map((d) => trainedLog(d));
+            expect(computeStreaks(seedTemplates(), logs, "2026-11-17").streak).toBe(4);
+        });
+    });
 });

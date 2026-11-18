@@ -67,8 +67,9 @@ export function swapBlock(input: SwapInput): SwapBlockReason | null {
     if (!week.includes(a) || !week.includes(b)) return "other-week";
     if (isPastDate(a, today) || isPastDate(b, today)) return "past";
     if (loggedDates.has(a) || loggedDates.has(b)) return "logged";
+    // A training day may swap with a rest day; two rest days have nothing to swap.
     if (
-        !trainingWeekdays.has(effectiveDayName(a, overrides)) ||
+        !trainingWeekdays.has(effectiveDayName(a, overrides)) &&
         !trainingWeekdays.has(effectiveDayName(b, overrides))
     ) {
         return "rest-day";

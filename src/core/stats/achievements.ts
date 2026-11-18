@@ -4,17 +4,17 @@
  *
  * A "full week" is a Monday to Sunday week in which every scheduled training
  * day has a trained log. The schedule is the current routine applied to the
- * whole history (see `training-days.ts`).
+ * whole history (see `training-days.ts`), read through the week overrides.
  */
 
 import type { IRoutineTemplate, IWorkoutLog } from "../domain";
 import { buildExerciseHistory } from "../progress";
 import { chronological } from "../progress/chronological";
-import { dayNameForDate } from "../schedule";
+import type { DayOverrides } from "../schedule";
 import { exerciseKey } from "../use-cases/detect-personal-records";
 import { ACHIEVEMENTS, type AchievementId } from "./achievement-table";
 import { addDays, daysBetween, weekStart } from "./dates";
-import { isTrainedLog, scheduledWeekdays, trainedDates } from "./training-days";
+import { isTrainedLog, scheduleFor, scheduledWeekdays, trainedDates } from "./training-days";
 
 export interface AchievementStatus {
     id: AchievementId;
@@ -39,9 +39,11 @@ interface WeekResult {
 function weekResults(
     templates: readonly IRoutineTemplate[],
     logs: readonly IWorkoutLog[],
-    today: string
+    today: string,
+    overrides: DayOverrides
 ): WeekResult[] {
     const scheduled = scheduledWeekdays(templates);
+    const isScheduled = scheduleFor(templates, overrides);
     const done = trainedDates(logs.filter((l) => l.date <= today));
     if (scheduled.size === 0 || done.size === 0) return [];
 
@@ -50,9 +52,7 @@ function weekResults(
     const results: WeekResult[] = [];
     for (let i = 0; i <= weeks; i++) {
         const monday = addDays(firstWeek, i * 7);
-        const days = Array.from({ length: 7 }, (_, d) => addDays(monday, d)).filter((d) =>
-            scheduled.has(dayNameForDate(d))
-        );
+        const days = Array.from({ length: 7 }, (_, d) => addDays(monday, d)).filter(isScheduled);
         const complete = days.length > 0 && days.every((d) => done.has(d));
         results.push({ completedOn: complete ? days[days.length - 1] : null });
     }
@@ -118,9 +118,10 @@ function plateauBreaker(logs: readonly IWorkoutLog[]): string | null {
 export function evaluateAchievements(
     templates: readonly IRoutineTemplate[],
     logs: readonly IWorkoutLog[],
-    today: string
+    today: string,
+    overrides: DayOverrides = {}
 ): AchievementStatus[] {
-    const weeks = weekResults(templates, logs, today);
+    const weeks = weekResults(templates, logs, today, overrides);
     const earnedOn: Record<AchievementId, string | null> = {
         "first-full-week": firstFullWeek(weeks),
         "ten-workouts": tenWorkouts(logs),

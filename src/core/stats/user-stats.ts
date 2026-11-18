@@ -5,10 +5,11 @@
  * proposes a weight (AGENTS.md rule 1).
  *
  * Simplification: the schedule is the CURRENT routine, read over the whole
- * history (see `training-days.ts`).
+ * history (see `training-days.ts`), read through the week overrides.
  */
 
 import type { IRoutineTemplate, IWorkoutLog } from "../domain";
+import type { DayOverrides } from "../schedule";
 import { evaluateAchievements, type AchievementStatus } from "./achievements";
 import { computeBestLifts, type BestLifts } from "./best-lifts";
 import { monthStart, weekStart } from "./dates";
@@ -49,12 +50,19 @@ export interface UserStatsInput {
     logs: readonly IWorkoutLog[];
     /** Local calendar date, YYYY-MM-DD. */
     today: string;
+    /** Swapped days of the user (date -> weekday shown). Defaults to none. */
+    overrides?: DayOverrides;
 }
 
-export function computeUserStats({ templates, logs, today }: UserStatsInput): UserStats {
+export function computeUserStats({
+    templates,
+    logs,
+    today,
+    overrides = {},
+}: UserStatsInput): UserStats {
     const trained = logs.filter(isTrainedLog);
     const xp = logs.reduce((sum, l) => sum + loggedSetCount(l) * XP_PER_SET, 0);
-    const { streak, bestStreak } = computeStreaks(templates, logs, today);
+    const { streak, bestStreak } = computeStreaks(templates, logs, today, overrides);
     const monthly = computeMonthlyProgress(logs, today);
     const { level, xpIntoLevel, xpForNextLevel } = levelProgress(xp);
 
@@ -72,6 +80,6 @@ export function computeUserStats({ templates, logs, today }: UserStatsInput): Us
         monthlyProgressPct: monthly.pct,
         monthStart: monthStart(today),
         workoutsCount: trained.length,
-        achievements: evaluateAchievements(templates, logs, today),
+        achievements: evaluateAchievements(templates, logs, today, overrides),
     };
 }

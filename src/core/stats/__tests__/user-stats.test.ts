@@ -97,4 +97,24 @@ describe("computeUserStats", () => {
         };
         expect(computeUserStats(input)).toEqual(computeUserStats(input));
     });
+
+    describe("with week overrides", () => {
+        // Tuesday the 10th's routine moved to Friday the 13th.
+        const overrides = { "2026-11-10": "viernes", "2026-11-13": "martes" };
+        const logs = ["2026-11-09", "2026-11-11", "2026-11-12", "2026-11-13"].map((d) =>
+            trainedLog(d)
+        );
+        const templates = seedTemplates();
+
+        it("reads the streak and achievements through them", () => {
+            const stats = computeUserStats({ templates, logs, today: "2026-11-15", overrides });
+            expect(stats.streak).toBe(4);
+            const fullWeek = stats.achievements.find((a) => a.id === "first-full-week");
+            expect(fullWeek).toMatchObject({ unlocked: true, unlockedAt: "2026-11-13" });
+        });
+
+        it("defaults to none", () => {
+            expect(computeUserStats({ templates, logs, today: "2026-11-15" }).streak).toBe(2);
+        });
+    });
 });

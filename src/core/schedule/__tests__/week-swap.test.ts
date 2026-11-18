@@ -112,14 +112,20 @@ describe("swapBlock", () => {
         expect(swapBlock({ ...base, loggedDates: new Set(["2026-11-17"]) })).toBe("logged");
     });
 
-    it("blocks a rest day", () => {
-        expect(swapBlock({ ...base, b: "2026-11-19" })).toBe("rest-day");
+    it("allows swapping a training day with a rest day", () => {
+        expect(swapBlock({ ...base, b: "2026-11-19" })).toBeNull();
+        expect(swapBlock({ ...base, a: "2026-11-21", b: "2026-11-17" })).toBeNull();
     });
 
-    it("reads training days through existing overrides", () => {
+    it("blocks two rest days", () => {
+        expect(swapBlock({ ...base, a: "2026-11-19", b: "2026-11-21" })).toBe("rest-day");
+    });
+
+    it("reads rest days through existing overrides", () => {
         const overrides = { "2026-11-18": "jueves", "2026-11-19": "miércoles" };
-        expect(swapBlock({ ...base, overrides })).toBe("rest-day");
-        expect(swapBlock({ ...base, b: "2026-11-19", overrides })).toBeNull();
+        const restPair = { ...base, a: "2026-11-18", b: "2026-11-21", overrides };
+        expect(swapBlock(restPair)).toBe("rest-day");
+        expect(swapBlock({ ...restPair, a: "2026-11-19" })).toBeNull();
     });
 
     it("blocks a swap with today while a session dated today is active", () => {
