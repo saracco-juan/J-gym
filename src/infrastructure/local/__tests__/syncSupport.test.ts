@@ -87,7 +87,9 @@ describe("applyPull", () => {
             routines: [routine],
             customExercises: [{ id: "c1", userId: "u1", name: "Remo", muscleGroup: "back", isBodyweight: false }],
             logs: [log],
+            dayOverrides: [{ userId: "u1", date: "2026-01-09", dayName: "lunes" }],
         });
+        expect(await repos.dayOverrides.listByUser("u1")).toHaveLength(1);
         expect(await repos.routines.listByUser("u1")).toHaveLength(1);
         expect(await repos.customExercises.listByUser("u1")).toHaveLength(1);
         expect(await repos.workoutLogs.listByUser("u1")).toHaveLength(1);

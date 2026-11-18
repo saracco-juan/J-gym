@@ -4,7 +4,13 @@
  * always injected so everything is deterministic.
  */
 
-export type OutboxEntity = "routine" | "customExercise" | "workoutLog" | "profile" | "stats";
+export type OutboxEntity =
+    | "routine"
+    | "customExercise"
+    | "workoutLog"
+    | "dayOverride"
+    | "profile"
+    | "stats";
 export type OutboxOp = "upsert" | "delete";
 
 export interface OutboxEntry {
@@ -32,15 +38,16 @@ export interface EnqueueInput {
 }
 
 /**
- * Parents first: routines, then custom exercises, then logs, then the profile,
- * and the public stats last (the server only accepts them once the profile exists).
+ * Parents first: routines, then custom exercises, then logs, then the week
+ * overrides (keyed by user and date, no parent), then the profile, and the public stats last (the server only accepts them once the profile exists).
  */
 export const ENTITY_PRIORITY: Readonly<Record<OutboxEntity, number>> = {
     routine: 0,
     customExercise: 1,
     workoutLog: 2,
-    profile: 3,
-    stats: 4,
+    dayOverride: 3,
+    profile: 4,
+    stats: 5,
 };
 
 export const BACKOFF_BASE_MS = 2_000;

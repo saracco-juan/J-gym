@@ -7,11 +7,13 @@
 import type { IProfile, IRoutineTemplate, IWorkoutLog } from "../domain";
 import {
     customExerciseToRow,
+    dayOverrideToRow,
     logToRow,
     profileToRow,
     routineToRow,
     statsToRow,
     type CustomExerciseWithUser,
+    type DayOverrideWithUser,
     type StatsPayload,
 } from "../mappers";
 import type { OutboxEntry } from "./outbox";
@@ -21,18 +23,35 @@ export type SyncTable =
     | "workout_logs"
     | "custom_exercises"
     | "profiles"
-    | "public_stats";
+    | "public_stats"
+    | "day_overrides";
+
+/**
+ * Outbox entity id of a swapped day. Scoped by user so pending writes of two
+ * accounts on one device never coalesce into each other.
+ */
+export function dayOverrideEntityId(userId: string, date: string): string {
+    return `${userId}:${date}`;
+}
+
+/** Payload of a removed swapped day. */
+export interface DayOverrideKey {
+    userId: string;
+    date: string;
+}
 
 export type SyncCommand =
     | {
           kind: "upsert";
           table: SyncTable;
           row: Record<string, unknown>;
-          /** Conflict column when it is not `id` (profiles and stats are keyed by user_id). */
+          /** Conflict columns when not `id` (profiles and stats: user_id; overrides: user_id,date). */
           onConflict?: string;
       }
     | { kind: "delete"; table: "routine_templates" | "workout_logs"; id: string }
-    | { kind: "soft-delete"; table: "custom_exercises"; id: string; deletedAt: string };
+    | { kind: "soft-delete"; table: "custom_exercises"; id: string; deletedAt: string }
+    /** Overrides have no id: a removed one is deleted by its owner and date. */
+    | { kind: "delete-by-date"; table: "day_overrides"; userId: string; date: string };
 
 export function toSyncCommand(entry: OutboxEntry, userId: string, nowIso: string): SyncCommand {
     if (entry.op === "delete") {
@@ -45,6 +64,13 @@ export function toSyncCommand(entry: OutboxEntry, userId: string, nowIso: string
                 return { kind: "delete", table: "routine_templates", id: entry.entityId };
             case "workoutLog":
                 return { kind: "delete", table: "workout_logs", id: entry.entityId };
+            case "dayOverride":
+                return {
+                    kind: "delete-by-date",
+                    table: "day_overrides",
+                    userId,
+                    date: (entry.payload as DayOverrideKey).date,
+                };
             case "customExercise":
                 return {
                     kind: "soft-delete",
@@ -66,6 +92,13 @@ export function toSyncCommand(entry: OutboxEntry, userId: string, nowIso: string
                 kind: "upsert",
                 table: "workout_logs",
                 row: { ...logToRow(entry.payload as IWorkoutLog), user_id: userId },
+            };
+        case "dayOverride":
+            return {
+                kind: "upsert",
+                table: "day_overrides",
+                onConflict: "user_id,date",
+                row: { ...dayOverrideToRow(entry.payload as DayOverrideWithUser), user_id: userId },
             };
         case "profile":
             return {

@@ -25,6 +25,8 @@ export interface SyncTransport {
     fetchCustomExercises(userId: string): Promise<unknown[]>;
     /** Raw `workout_logs` rows with `date >= sinceDate` (YYYY-MM-DD). */
     fetchLogsSince(userId: string, sinceDate: string): Promise<unknown[]>;
+    /** Raw `day_overrides` rows of the user with `date >= sinceDate` (YYYY-MM-DD). */
+    fetchDayOverridesSince(userId: string, sinceDate: string): Promise<unknown[]>;
     /** Raw `profiles` row of the user, or null when there is none. */
     fetchProfile(userId: string): Promise<unknown | null>;
 }

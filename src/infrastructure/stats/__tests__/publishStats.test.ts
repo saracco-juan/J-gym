@@ -76,6 +76,19 @@ describe("publishOwnStats", () => {
         expect(await repos.outbox.count()).toBe(1);
     });
 
+    it("reads the streak through the swapped days", async () => {
+        // Monday's routine moved to Tuesday the 17th and was trained there.
+        await repos.sync.storeProfileIfAbsent(profile);
+        await db.routines.put(monday);
+        await db.workoutLogs.put({ ...trained, date: "2026-11-17" });
+        await repos.dayOverrides.replaceWeek("u1", ["2026-11-16", "2026-11-17"], {
+            "2026-11-16": "martes",
+            "2026-11-17": "lunes",
+        });
+        await publishOwnStats(repos, { userId: "u1", today: "2026-11-17", registered: true });
+        expect((await repos.stats.get("u1"))?.stats.streak).toBe(1);
+    });
+
     it("never publishes for an anonymous account", async () => {
         await seed();
         const result = await publishOwnStats(repos, { userId: "u1", today: "2026-11-17", registered: false });

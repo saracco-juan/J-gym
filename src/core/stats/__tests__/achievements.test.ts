@@ -66,6 +66,17 @@ describe("evaluateAchievements", () => {
             expect(statusOf("first-full-week", logs, "2026-11-15").unlocked).toBe(false);
         });
 
+        it("counts a week whose routine day moved to a rest day", () => {
+            // Tuesday the 10th's routine moved to Friday the 13th.
+            const overrides = { "2026-11-10": "viernes", "2026-11-13": "martes" };
+            const logs = week("2026-11-09", [0, 2, 3, 4]);
+            const found = evaluateAchievements(seedTemplates(), logs, "2026-11-17", overrides).find(
+                (a) => a.id === "first-full-week"
+            );
+            expect(found).toEqual({ id: "first-full-week", unlocked: true, unlockedAt: "2026-11-13" });
+            expect(statusOf("first-full-week", logs, "2026-11-17").unlocked).toBe(false);
+        });
+
         it("keeps the earliest completed week", () => {
             const logs = [...week("2026-11-02"), ...week("2026-11-09")];
             expect(statusOf("first-full-week", logs, "2026-11-17").unlockedAt).toBe("2026-11-05");

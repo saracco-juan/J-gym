@@ -38,10 +38,16 @@ export async function publishOwnStats(
         if (stored && stored.date >= today) return "skipped-fresh";
     }
 
-    const [templates, logs] = await Promise.all([
+    const [templates, logs, rows] = await Promise.all([
         repos.routines.listByUser(userId),
         repos.workoutLogs.listByUser(userId),
+        repos.dayOverrides.listByUser(userId),
     ]);
-    await repos.stats.publish(userId, today, computeUserStats({ templates, logs, today }));
+    const overrides = Object.fromEntries(rows.map((r) => [r.date, r.dayName]));
+    await repos.stats.publish(
+        userId,
+        today,
+        computeUserStats({ templates, logs, today, overrides })
+    );
     return "published";
 }

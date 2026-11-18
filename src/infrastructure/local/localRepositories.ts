@@ -17,6 +17,7 @@ import type { StatsPayload } from "@/core/mappers";
 import type { UserStats } from "@/core/stats";
 import {
     coalesceEntry,
+    dayOverrideEntityId,
     markFailed,
     nextBatch,
     type OutboxEntity,
@@ -252,8 +253,28 @@ export function createLocalRepositories(
         },
     };
 
-    /** Swapped days of the current week: local only, never synced (no outbox entry). */
+    /** Must run inside a transaction with `db.dayOverrides` and `db.outbox`. */
+    async function putOverride(row: DayOverrideRecord): Promise<void> {
+        await db.dayOverrides.put(row);
+        await enqueueWrite("dayOverride", dayOverrideEntityId(row.userId, row.date), "upsert", row);
+    }
+
+    /** Must run inside a transaction with `db.dayOverrides` and `db.outbox`. */
+    async function removeOverride(userId: string, date: string): Promise<void> {
+        await db.dayOverrides.delete([userId, date]);
+        await enqueueWrite("dayOverride", dayOverrideEntityId(userId, date), "delete", {
+            userId,
+            date,
+        });
+    }
+
+    /**
+     * Swapped days. Every change enqueues an upsert (new or changed day) or a
+     * delete (removed day) keyed by user and date, in the same transaction.
+     */
     const dayOverrides = {
+        listByUser: (userId: string): Promise<DayOverrideRecord[]> =>
+            db.dayOverrides.where("userId").equals(userId).toArray(),
         /** Overrides of the user between `from` and `to` (YYYY-MM-DD, inclusive). */
         listForRange: (userId: string, from: string, to: string): Promise<DayOverrideRecord[]> =>
             db.dayOverrides
@@ -262,27 +283,48 @@ export function createLocalRepositories(
                 .toArray(),
         /**
          * Replaces the overrides of the week (`weekDates`, Monday first) with
-         * `overrides` (date -> weekday name, dates outside the week ignored) and
-         * drops the rows of earlier weeks.
+         * `overrides` (date -> weekday name, dates outside the week ignored).
+         * Rows of other weeks are kept. Unchanged days enqueue nothing.
          */
         async replaceWeek(
             userId: string,
             weekDates: readonly string[],
             overrides: Readonly<Record<string, string>>
         ): Promise<void> {
-            const rows: DayOverrideRecord[] = weekDates
-                .filter((date) => overrides[date] !== undefined)
-                .map((date) => ({ userId, date, dayName: overrides[date] }));
-            await db.transaction("rw", db.dayOverrides, async () => {
-                await db.dayOverrides
+            const first = weekDates[0];
+            const last = weekDates[weekDates.length - 1];
+            const changed = await db.transaction("rw", [db.dayOverrides, db.outbox], async () => {
+                const current = await db.dayOverrides
                     .where("[userId+date]")
-                    .between([userId, ""], [userId, weekDates[weekDates.length - 1]], true, true)
-                    .delete();
-                await db.dayOverrides.bulkPut(rows);
+                    .between([userId, first], [userId, last], true, true)
+                    .toArray();
+                let writes = 0;
+                for (const row of current) {
+                    if (overrides[row.date] !== undefined) continue;
+                    await removeOverride(userId, row.date);
+                    writes++;
+                }
+                for (const date of weekDates) {
+                    const dayName = overrides[date];
+                    if (dayName === undefined) continue;
+                    if (current.some((r) => r.date === date && r.dayName === dayName)) continue;
+                    await putOverride({ userId, date, dayName });
+                    writes++;
+                }
+                return writes > 0;
             });
+            if (changed) notify();
         },
+        /** Removes every override of the user, queuing the deletes for the server. */
         async clearUser(userId: string): Promise<void> {
-            await db.dayOverrides.where("userId").equals(userId).delete();
+            const removed = await db.transaction("rw", [db.dayOverrides, db.outbox], async () => {
+                const rows = await db.dayOverrides.where("userId").equals(userId).toArray();
+                for (const row of rows) {
+                    await removeOverride(userId, row.date);
+                }
+                return rows.length > 0;
+            });
+            if (removed) notify();
         },
     };
 
@@ -402,14 +444,16 @@ export function createLocalRepositories(
             routines: IRoutineTemplate[];
             customExercises: StoredCustomExercise[];
             logs: IWorkoutLog[];
+            dayOverrides?: DayOverrideRecord[];
         }): Promise<void> {
             await db.transaction(
                 "rw",
-                [db.routines, db.customExercises, db.workoutLogs],
+                [db.routines, db.customExercises, db.workoutLogs, db.dayOverrides],
                 async () => {
                     await db.routines.bulkPut(data.routines);
                     await db.customExercises.bulkPut(data.customExercises);
                     await db.workoutLogs.bulkPut(data.logs);
+                    await db.dayOverrides.bulkPut(data.dayOverrides ?? []);
                 }
             );
         },

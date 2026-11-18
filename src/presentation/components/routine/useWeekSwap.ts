@@ -4,6 +4,8 @@
  * useWeekSwap — state of the "Esta semana" panel: the current week with each
  * date's routine, and the swap / reset actions. The rules are pure, in core
  * (`swapBlock`, `resetBlock`); reads and writes go through local queries.
+ * A training day may move to a rest day; the streak follows the swap, so every
+ * applied change asks for a new stats snapshot.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -20,6 +22,7 @@ import {
     type WeekPlan,
     type WeekPlanDay,
 } from "@/infrastructure/local/queries";
+import { requestStatsPublish } from "@/presentation/stats/requestStatsPublish";
 import { useSyncStore } from "@/presentation/stores/useSyncStore";
 
 /** Short reason shown next to a day that cannot be swapped. */
@@ -28,7 +31,7 @@ export const SWAP_BLOCK_LABELS: Record<SwapBlockReason, string> = {
     "other-week": "No es de esta semana",
     past: "Ya pasó",
     logged: "Ya entrenaste ese día",
-    "rest-day": "Día de descanso",
+    "rest-day": "Los dos días son de descanso",
     "session-in-progress": "Tenés un entrenamiento en curso",
 };
 
@@ -90,7 +93,8 @@ export function useWeekSwap() {
             setActionError(null);
             try {
                 const result = await write(userId, toLocalDateStr(new Date()));
-                if (!result.ok) setActionError(SWAP_BLOCK_LABELS[result.reason]);
+                if (result.ok) void requestStatsPublish();
+                else setActionError(SWAP_BLOCK_LABELS[result.reason]);
                 setSource(null);
                 await reload();
             } catch {

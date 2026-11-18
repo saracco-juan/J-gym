@@ -8,15 +8,16 @@
  *   adds nothing;
  * - today counts only once it is logged: an unlogged today does not break the
  *   streak yet.
+ * Week overrides (swapped days) decide which weekday's routine a date shows.
  * Several logs on one day count once. Logs dated after today are ignored.
  *
  * Both numbers come from one forward pass from the first trained day to today.
  */
 
 import type { IRoutineTemplate, IWorkoutLog } from "../domain";
-import { dayNameForDate } from "../schedule";
+import type { DayOverrides } from "../schedule";
 import { addDays, daysBetween } from "./dates";
-import { scheduledWeekdays, trainedDates } from "./training-days";
+import { scheduleFor, scheduledWeekdays, trainedDates } from "./training-days";
 
 export interface Streaks {
     /** Consecutive completed scheduled days up to today. */
@@ -28,9 +29,11 @@ export interface Streaks {
 export function computeStreaks(
     templates: readonly IRoutineTemplate[],
     logs: readonly IWorkoutLog[],
-    today: string
+    today: string,
+    overrides: DayOverrides = {}
 ): Streaks {
     const scheduled = scheduledWeekdays(templates);
+    const isScheduled = scheduleFor(templates, overrides);
     const done = trainedDates(logs.filter((l) => l.date <= today));
     if (scheduled.size === 0 || done.size === 0) return { streak: 0, bestStreak: 0 };
 
@@ -42,7 +45,7 @@ export function computeStreaks(
     let best = 0;
     for (let offset = 0; offset <= span; offset++) {
         const date = addDays(first, offset);
-        if (!scheduled.has(dayNameForDate(date))) continue;
+        if (!isScheduled(date)) continue;
         if (done.has(date)) {
             run++;
             best = Math.max(best, run);

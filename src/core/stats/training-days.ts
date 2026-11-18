@@ -9,12 +9,25 @@
  */
 
 import type { IRoutineTemplate, IWorkoutLog } from "../domain";
+import { effectiveDayName, type DayOverrides } from "../schedule";
 
 /** Weekday names (as stored in `dayName`, lower case) that have training. */
 export function scheduledWeekdays(templates: readonly IRoutineTemplate[]): Set<string> {
     return new Set(
         templates.filter((t) => t.exercises.length > 0).map((t) => t.dayName.trim().toLowerCase())
     );
+}
+
+/**
+ * Whether a date is a scheduled training day: the routine of the weekday the
+ * date shows once the week overrides (swapped days) are applied.
+ */
+export function scheduleFor(
+    templates: readonly IRoutineTemplate[],
+    overrides: DayOverrides
+): (date: string) => boolean {
+    const scheduled = scheduledWeekdays(templates);
+    return (date) => scheduled.has(effectiveDayName(date, overrides));
 }
 
 /** Number of sets actually logged in the workout. */
