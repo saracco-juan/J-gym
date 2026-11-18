@@ -18,7 +18,7 @@ v1 blocked training<->rest because streak and full-week achievements read the sc
 
 ## Tasks
 - [x] T1 Core swap + stats rules (RED/GREEN). Route: delegated writer.
-- [ ] T2 Core sync entity, commands, mapper (RED/GREEN). Route: same writer.
+- [x] T2 Core sync entity, commands, mapper (RED/GREEN). Route: same writer.
 - [ ] T3 Infra: replaceWeek keeps history and enqueues, transport, pull, applyPull, publishStats. Route: same writer.
 - [ ] T4 Migration 0007 + UI (rest targets, copy, publish request). Route: same writer.
 - [ ] T5 Docs: README migrations + sync note, this log. Route: same writer.
@@ -35,3 +35,4 @@ v1 blocked training<->rest because streak and full-week achievements read the sc
 ## Log
 - 2026-11-17: plan approved. Branch created.
 - 2026-11-17: T1 RED `npx jest src/core/schedule src/core/stats`: 5 suites failed, 9 tests failed / 131 passed (scheduleFor missing, overrides ignored, training<->rest blocked). GREEN: 11 suites, 140 tests passed; tsc and eslint clean.
+- 2026-11-17: T2 RED `npx jest src/core/sync src/core/mappers`: 3 suites failed (mapper module missing), 3 tests failed / 85 passed. GREEN `npx jest src/core`: 49 suites, 609 tests passed; tsc and eslint clean.

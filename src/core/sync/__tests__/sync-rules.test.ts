@@ -306,6 +306,50 @@ describe("stats commands", () => {
     });
 });
 
+describe("day override commands", () => {
+    const payload = { userId: "stale", date: "2026-11-20", dayName: "martes" };
+
+    it("upserts the override keyed by user_id and date, owned by the session user", () => {
+        const cmd = toSyncCommand(
+            entry({ entity: "dayOverride", entityId: "2026-11-20", op: "upsert", payload }),
+            "u1",
+            "x"
+        );
+        expect(cmd).toEqual({
+            kind: "upsert",
+            table: "day_overrides",
+            onConflict: "user_id,date",
+            row: { user_id: "u1", date: "2026-11-20", day_name: "martes", schema_version: 1 },
+        });
+    });
+
+    it("deletes a removed override by the session user and its date", () => {
+        const cmd = toSyncCommand(
+            entry({ entity: "dayOverride", entityId: "2026-11-20", op: "delete", payload }),
+            "u1",
+            "x"
+        );
+        expect(cmd).toEqual({
+            kind: "delete-by-date",
+            table: "day_overrides",
+            userId: "u1",
+            date: "2026-11-20",
+        });
+    });
+
+    it("holds back upserts and deletes of overrides that belong to another user", () => {
+        const mine = { ...payload, userId: "u1" };
+        const other = { ...payload, userId: "u9" };
+        const entries = [
+            entry({ id: "a", entity: "dayOverride", entityId: "2026-11-20", op: "upsert", payload: other }),
+            entry({ id: "b", entity: "dayOverride", entityId: "2026-11-21", op: "delete", payload: other }),
+            entry({ id: "c", entity: "dayOverride", entityId: "2026-11-22", op: "delete", payload: mine }),
+        ];
+        const plan = planFlush({ entries, now: 1000, userId: "u1" });
+        expect(plan.kind === "send" && plan.batch.map((e) => e.id)).toEqual(["c"]);
+    });
+});
+
 describe("shouldDropFailedEntry", () => {
     it("drops a failed stats snapshot unless the device is offline", () => {
         expect(shouldDropFailedEntry("stats", "auth")).toBe(true);
@@ -316,7 +360,7 @@ describe("shouldDropFailedEntry", () => {
     });
 
     it("never drops anything else", () => {
-        for (const entity of ["routine", "customExercise", "workoutLog", "profile"] as const) {
+        for (const entity of ["routine", "customExercise", "workoutLog", "profile", "dayOverride"] as const) {
             expect(shouldDropFailedEntry(entity, "auth")).toBe(false);
             expect(shouldDropFailedEntry(entity, "retry")).toBe(false);
         }

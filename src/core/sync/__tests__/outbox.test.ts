@@ -188,3 +188,40 @@ describe("stats entity", () => {
         expect(second[0]).toMatchObject({ id: "s2", payload: { n: 2 }, createdAt: 10 });
     });
 });
+
+describe("dayOverride entity", () => {
+    it("is sent after logs and before the profile and the stats", () => {
+        const override = entry({ id: "d", entity: "dayOverride", entityId: "2026-11-20", createdAt: 1 });
+        const routine = entry({ id: "r", entity: "routine", entityId: "r1", createdAt: 90 });
+        const log = entry({ id: "l", entity: "workoutLog", entityId: "l1", createdAt: 99 });
+        const profile = entry({ id: "p", entity: "profile", entityId: "u1", createdAt: 0 });
+        const stats = entry({ id: "s", entity: "stats", entityId: "u1", createdAt: 0 });
+        expect(nextBatch([stats, override, profile, log, routine], 1000).map((e) => e.id)).toEqual([
+            "r",
+            "l",
+            "d",
+            "p",
+            "s",
+        ]);
+    });
+
+    it("coalesces edits of the same date, a delete replacing a pending upsert", () => {
+        const date = "2026-11-20";
+        const first = enqueue(
+            [],
+            input({ id: "d1", entity: "dayOverride", entityId: date, payload: { dayName: "martes" }, now: 10 })
+        );
+        const second = enqueue(
+            first,
+            input({ id: "d2", entity: "dayOverride", entityId: date, op: "delete", now: 20 })
+        );
+        expect(second).toHaveLength(1);
+        expect(second[0]).toMatchObject({ id: "d2", op: "delete", createdAt: 10 });
+    });
+
+    it("keeps one pending entry per date", () => {
+        const first = enqueue([], input({ id: "d1", entity: "dayOverride", entityId: "2026-11-17" }));
+        const second = enqueue(first, input({ id: "d2", entity: "dayOverride", entityId: "2026-11-20" }));
+        expect(second).toHaveLength(2);
+    });
+});
