@@ -19,7 +19,7 @@ The UI is in Spanish.
 - **Gym table** (`/leaderboard`): every registered user with a profile is ranked by streak, weekly volume or progress of the month, with level, status and achievements on a card. Each device computes its own stats from local data and publishes one snapshot; offline it shows the last board it saw. The numbers are self reported and only describe what happened: the app never suggests a weight.
 - **Onboarding:** pick your training days, start from a default routine or build your own.
 - **Weekly calendar** with the routine of the day and a motivational quote on rest days.
-- **Swap days this week** (`/routine`, "Esta semana"): trade the routines of two training days of the current week, for example Legs on Monday and Cardio on Tuesday. Only days from today on, with no workout logged, can be swapped, and not today while a workout is in progress. Next week goes back to the normal routine on its own. Swaps are stored only on this device (not synced).
+- **Swap days this week** (`/routine`, "Esta semana"): trade the routines of two days of the current week, for example Legs on Monday and Cardio on Tuesday, or move a routine to a rest day (Tuesday's routine done on Friday). Two rest days cannot be swapped. Only days from today on, with no workout logged, can be swapped, and not today while a workout is in progress. Next week goes back to the normal routine on its own. The streak and the "full week" achievements follow the swap: they read the routine each date showed. Swaps are kept after their week and sync to Supabase (`day_overrides`, migration `0007`), so every device computes the same stats.
 - **Workout session:** log reps and weight per set, then finish to save an immutable log.
 - **Personal records** detected when a session beats your previous best weight.
 - **Progressive overload engine** updates the next session's scheme from your performance.
@@ -74,6 +74,9 @@ Requirements: Node 20+ and a Supabase project (the free tier works).
    | `0004_profiles.sql` | `profiles` (display name and avatar color) with its Row Level Security |
    | `0005_public_stats.sql` | `public_stats` (the snapshot each user publishes for the leaderboard) with its Row Level Security |
    | `0006_delete_account.sql` | `delete_own_account()`, the function behind "Eliminar cuenta" |
+   | `0007_day_overrides.sql` | `day_overrides` (the days swapped in "Esta semana", synced so every device reads the same schedule) with its Row Level Security |
+
+   Run `0007` before deploying the version that syncs swapped days. Without the table the swaps still work on the device, but their writes wait in the outbox, retrying, until it exists.
 
 2. Set up the email code login (see **Authentication** below).
 3. Configure and start:
@@ -106,7 +109,7 @@ Once every anonymous account that matters has linked an email, turn **Allow anon
 
 Two actions in the profile menu, both behind a confirmation sheet:
 
-- **Reiniciar datos** keeps the account, the name and the color. It deletes the routine, the workouts, the custom exercises and the unfinished session on the device and queues the matching deletes in the outbox, so it works offline. A fresh empty stats snapshot is published so the leaderboard stops showing the old numbers. It is blocked while a workout is in progress. Other devices keep their local copy until they reset too.
+- **Reiniciar datos** keeps the account, the name and the color. It deletes the routine, the workouts, the custom exercises, the swapped days and the unfinished session on the device and queues the matching deletes in the outbox, so it works offline. A fresh empty stats snapshot is published so the leaderboard stops showing the old numbers. It is blocked while a workout is in progress. Other devices keep their local copy until they reset too.
 - **Eliminar cuenta** needs a connection and the word `ELIMINAR` typed. It calls the `delete_own_account()` RPC (migration `0006`), which deletes the row in `auth.users`; every user table references it with `ON DELETE CASCADE`, so routines, workouts, custom exercises, profile and stats go with it, and Supabase removes the sessions and refresh tokens. If the call fails nothing is deleted locally. On success the device is wiped (data, outbox, profile, stats cache) and the app returns to `/login`. A JWT already issued stays valid until it expires, but a deleted user has no rows left for it to reach. Deleting a user that owns Storage objects is refused by Supabase; the app stores none.
 
 ## Scripts
